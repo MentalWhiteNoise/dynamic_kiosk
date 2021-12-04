@@ -1,0 +1,21 @@
+POST http://localhost:3000/books/2 HTTP/1.1
+Content-Type: application/json
+
+{
+    "Id": 2,
+    "Title": "Maou-Sama No Machizukuri! ~Saikyou No Dungeon Wa Kindai Toshi~",
+    "Sites": [
+        {
+            "SiteId": "097a0795-245d-45bd-9106-a271caa8fae6",
+            "Url": "https://manganelo.com/manga/maousama_no_machizukuri_saikyou_no_dungeon_wa_kindai_toshi",
+            "Image": "https://avt.mkklcdnv6temp.com/30/e/16-1583494555.jpg",
+            "LastAttempted": "2021-11-30T07:03:47.5735464-05:00",
+            "LastSuccessful": "2021-11-30T07:03:49.4448282-05:00"
+        }
+    ],
+    "AltTitles": [
+        "Demon Kings Urban Development! ~The Strongest Dungeon is a Modern City~"
+    ],
+    "Folder": "Favorites"
+}
+###

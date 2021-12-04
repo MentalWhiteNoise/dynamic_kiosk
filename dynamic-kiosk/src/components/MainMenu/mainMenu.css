@@ -1,0 +1,15 @@
+.header {
+    background-color: #400CCC;
+    display: "flex";
+}
+.link {
+    text-decoration: none;
+    color: white;
+    font-size: 20px;
+    margin-left: 10pt;
+}
+.link:hover {
+    color: yellow;
+    border-bottom: 1px solid white;
+}
+  
