@@ -1,3 +1,5 @@
-POST http://localhost:3000/book/2/checkForUpdates HTTP/1.1
+# POST http://localhost:3000/book/2/checkForUpdates HTTP/1.1
 
 #POST http://localhost:3000/book/2/site/097a0795-245d-45bd-9106-a271caa8fae6/checkForUpdates HTTP/1.1
+
+POST http://localhost:3000/book/27/site/fcb72602-7dc0-4335-9a27-e16da46d2ffa/checkForUpdates HTTP/1.1

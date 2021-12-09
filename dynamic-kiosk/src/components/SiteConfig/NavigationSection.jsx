@@ -1,15 +1,25 @@
 import React, {} from "react";
-import { Paper, FormControlLabel, Checkbox, IconButton, Table, TableBody, TableRow, TableCell, FormLabel } from "@mui/material";
-import { Add, Delete } from '@mui/icons-material';
+import { Paper, FormControlLabel, Checkbox, IconButton, FormLabel, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import { Add, Delete, DragIndicator, ExpandMore } from '@mui/icons-material';
 import NavigationMethod from "./NavigationMethod";
 //import { Link } from "react-router-dom";
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 export default function NavigationSection(props){
-    const {label, optional, navigationArray, onMethodChange, onPropertyChange, onRemove, onAdd, onToggle} = props
+    const {label, optional, navigationArray, onMethodChange, onPropertyChange, onRemove, onAdd, onToggle, onReorder, onExpandChange, expanded} = props
     const enabled = navigationArray != null
+    const onDragEnd = ({ destination, source }) => {
+        // dropped outside the list
+        if (!destination) return;
+        onReorder(navigationArray, source.index, destination.index)
+      };
     //console.log(label, navigationArray)
     return (
     <Paper>
+    <Accordion expanded={expanded} onChange={(e, i) => {onExpandChange(i && (optional === false || enabled))}}>
+        <AccordionSummary
+          expandIcon={<ExpandMore />}          
+          >
         {optional ? (<FormControlLabel 
             control={(<Checkbox 
                     checked={enabled} 
@@ -17,30 +27,43 @@ export default function NavigationSection(props){
                 />)} 
             label={label} />) : (<FormLabel>{label}</FormLabel>)
         }
+        </AccordionSummary>
+        <AccordionDetails>
         {
             (optional === false || enabled) ?
             (<>
-            <Table size="small">
-                <TableBody>
+            <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="droppable-list">
+                {provided => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
                     {(navigationArray || []).map((x, i) => (
-                            <TableRow key={i}>
-                                <TableCell>
-                    <NavigationMethod
-                        method={x.method}
-                        properties={x.properties}
-                        onMethodChange={(v) => onMethodChange(i,v)}
-                        onPropertyChange={(p,v) => onPropertyChange(i,p,v)}
-                        />
-                                </TableCell>
-                                <TableCell>
+                        <Draggable key={i} draggableId={"drag_" + i} index={i}>
+                        {(provided, snapshot) => (
+                        <Paper
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                        >
+                        <DragIndicator/>
+                        <NavigationMethod
+                            method={x.method}
+                            properties={x.properties}
+                            onMethodChange={(v) => onMethodChange(i,v)}
+                            onPropertyChange={(p,v) => onPropertyChange(i,p,v)}
+                            />
                                     <IconButton onClick={() => onRemove(i)}><Delete/></IconButton>
-                                </TableCell>
-                            </TableRow>
-                            ))
-                    }
-                </TableBody>
-            </Table>
+                        </Paper>
+                        )}
+                        </Draggable>
+                    ))}
+                    {provided.placeholder}
+                </div>
+                )}
+            </Droppable>
+            </DragDropContext>
             <IconButton onClick={onAdd}><Add/></IconButton></>) : <></>
         }
+        </AccordionDetails>
+    </Accordion>
     </Paper>)
 }

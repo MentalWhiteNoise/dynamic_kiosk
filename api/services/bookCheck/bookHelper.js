@@ -1,91 +1,10 @@
-/*
-I may need to build a method to reload siteConfig and readList when they change...
-*/
-
-const puppeteer = require('puppeteer');
-/*
-        private string WorkingDirectory;
-        private List<SiteConfig> Sites;
-        private List<Book> BookList;
-*/
 const fs = require('fs');
-//const readline = require('readline');
-//const path = require('path');
-const webHelper = require('./webHelper');
+const parseHelper = require('./parseHelper');
+const helper = require('./genericHelper');
 
-async function parseContents(browser, url, multiPage, sites)
-{
-    let rtrn = {};
-    let found = false;
-    let site = null;
-    sites.forEach(s => {
-        //console.log(site.site, url)
-        if (url.startsWith(s.site))
-        {
-            site = s;
-            found = true;
-        }
-    })
-    //console.log(site.site);
-    if (!found)
-    {
-        console.log(`Unkown source - cannot parse ${url}`);
-        return null;
-    }
-    
-    const content = await webHelper.getUrlContents(browser, url, site.postLoad)
-   
-    if (content == null) return null;
-    
-    const title = parseText(site.title, content);
-    if (isNullOrWhiteSpace(title))
-    {
-        console.log(`Issues parsing title for ${url}`);
-        return null;
-    }
-    rtrn = {...rtrn, title: title};
-    
-    const image = parseText(site.image, content);
-    if (isNullOrWhiteSpace(image))
-        console.log(`Bad image for ${url}`);
-    else
-        rtrn = {...rtrn, image: image};
-
-    const chapterText = parseText(site.chapterText, content);
-    if (isNullOrWhiteSpace(chapterText))
-    {
-        console.log(`Error parsing chapters for ${url}`);
-        return null;
-    }
-    //console.log(site.splitChapterText)
-    const chaptersRaw = replaceAll(chapterText, site.splitChapterText, String.fromCharCode(30)).split(String.fromCharCode(30));
-
-    let chapterList = [];
-    chaptersRaw.forEach(chapter => {
-        const tempChapter = parseRow(site.forEachChapterText, chapter);
-        if (tempChapter != null)
-        { chapterList.push(tempChapter); }
-    })
-    if (multiPage && site.multiPage != null)
-    {
-        try
-        {
-            const nextPageUrl = parseText(site.multiPage.nextPageUrl, content);
-            const nextPageContents = parseContents(webHelper, nextPageUrl, true);
-            nextPageContents.forEach(chapter => chapterList.push(chapter));
-        }
-        catch
-        {
-
-        }
-    }
-
-    rtrn = {...rtrn, chapterList: chapterList};
-    return rtrn;
-}
 function getReadingList()
 {
-    const storeFile = './data/bookcheck/readingList.json'
+    const storeFile = './data/bookCheck/readingList.json'
     if (fs.existsSync(storeFile))
     {
         const items = fs.readFileSync(storeFile);
@@ -95,7 +14,7 @@ function getReadingList()
 }
 function getSiteConfig()
 {
-    const configFile = './data/bookcheck/siteConfig.json'
+    const configFile = './data/bookCheck/siteConfig.json'
     if (fs.existsSync(configFile))
     {
         const items = fs.readFileSync(configFile);
@@ -103,173 +22,6 @@ function getSiteConfig()
     }
     return []
 }
-function parseRow(chapterConfig, rowValue)
-{
-    let parsedRow = {}
-    
-    if (chapterConfig.filter != null)
-    {
-        const filterText = parseText(chapterConfig.filter.text, rowValue);
-        
-        if (chapterConfig.filter.in != null && chapterConfig.filter.in.length > 0)
-        {
-            let isIn = false;
-            chapterConfig.filter.in.forEach(s =>{
-                if (s == filterText)
-                {
-                    isIn = true;
-                }
-            })
-            if (!isIn)
-                return null;
-        }
-        if (chapterConfig.filter.notIn != null)
-        {
-            chapterConfig.filter.notIn.forEach(s =>
-            {
-                if (s == filterText)
-                    return null;
-            })
-        }
-    }
-    const hRef = parseText(chapterConfig.hRef, rowValue);
-    if (isNullOrWhiteSpace(hRef)) return null;
-    parsedRow = {...parsedRow, hRef: hRef};
-
-    const chapterTitle = parseText(chapterConfig.chapterTitle, rowValue);
-    if (isNullOrWhiteSpace(chapterTitle)) return null;
-    parsedRow = {...parsedRow, chapterTitle: chapterTitle};
-
-    const uploaded = parseText(chapterConfig.dateUploaded, rowValue);    
-    try
-    {
-        const dateUploaded = new Date(uploaded);
-        parsedRow = {...parsedRow, dateUploaded: dateUploaded};
-    }
-    catch { }
-    
-    const chapterNumberText = parseText(chapterConfig.chapterNumber, rowValue);
-    if (chapterNumberText != null)
-    {
-        try
-        {
-            const chapterNumber = parseFloat(chapterNumberText);
-            parsedRow = {...parsedRow, chapterNumber: chapterNumber};
-        }
-        catch { }
-    }
-
-    return parsedRow;
-}
-
-function parseText (methods, text) {
-    let rtrn = text;
-    if (methods == null || methods.length  == 0)
-        return null;
-    try
-    {
-        methods.forEach(parseMethod => 
-        {
-            let searchString = "";
-            switch (parseMethod.method)
-            {
-                case "readPast":
-                    searchString = parseMethod.string;
-                    rtrn = rtrn.substring(rtrn.indexOf(searchString) + searchString.length);
-                    break;
-                case "readUntil":
-                    searchString = parseMethod.string;
-                    rtrn = rtrn.substring(0, rtrn.indexOf(searchString));
-                    break;
-                case "trim":
-                    rtrn = rtrn.trim();
-                    break;
-                case "movePastTag":
-                    rtrn = movePastTag(rtrn);
-                    break;
-                case "cleanHtmlText":
-                    rtrn = cleanHtmlText(rtrn);
-                    break;
-                case "readAfterLast":
-                    rtrn = rtrn.substring(rtrn.lastIndexOf(parseMethod.string) + parseMethod.string.length);
-                    break;
-                case "regexMatch":
-                    const matches = rtrn.match(parseMethod.string);
-                    rtrn = matches[matches.length - 1];
-                    //rtrn = matches[matches.length - 1].groups[0].value;
-                    break;
-                case "toLower":
-                    rtrn = rtrn.toLowerCase();
-                    break;
-                case "prepend":
-                    rtrn = parseMethod.string + rtrn;
-                    break;
-                case "movePastElement":
-                    rtrn = movePastElement(rtrn);
-                    break;
-                case "remove":
-                    rtrn = replaceAll(rtrn, parseMethod.string, "");
-                    break;
-                case "removeOrdinalIndicator":
-                    rtrn = rtrn.replace(/(?<=[0-9])(?:st|nd|rd|th)/, "");
-                    break;
-                default:
-                    throw `Unexpected method: ${parseMethod.method}`;
-            }
-        })
-        return rtrn;
-    }
-    catch
-    {
-        return null;
-    }
-}
-function cleanHtmlText(text)
-{
-    text = text.trim();
-    if (text[0] == '"')
-    {
-        text = text.substring(1, text.Length - 2);
-        text = text.trim();
-    }
-    text = replaceAll(text, "&#8217;", "'");
-    while (text[0] == '\n')
-    {
-        text = text.substring(1, text.Length - 1);
-        text = text.trim();
-    }
-
-    return text;
-}
-function movePastTag(text)
-{
-    if (text[0] == '<')
-    {
-        text = text.substring(text.indexOf(">") + 1);
-        return movePastTag(text);
-    }
-    return text;
-}
-function movePastElement(text)
-{
-    if (text[0] == '<')
-    {
-        var tagEnd = Math.min(text.indexOf(" "), text.indexOf(">"));
-        if (text[tagEnd - 1] == '/')
-        { return movePastTag(text); }
-        var tag = text.substring(1, tagEnd - 1);
-        return text.substring(text.indexOf("</{tag}>") + "</{tag}>".Length);
-    }
-    return text;
-}
-function isNullOrWhiteSpace(text) {
-    if (typeof text === 'undefined' || text == null) return true;
-    return text.replace(/\s/g, '').length < 1;
-}
-function replaceAll(string, search, replace) {
-    return string.split(search).join(replace);
-  }
-
 function getSites(){
     return getSiteConfig().map(s => s.site);
 }
@@ -285,28 +37,25 @@ async function removeBook(bookId){
 
 }
 function getChapters(bookId){
-    //const directoryPath = path.join(__dirname, 'Documents');
     const chapterFile = `./data/bookcheck/Chapters_${bookId}.json`
     if (fs.existsSync(chapterFile))
     {
         const items = fs.readFileSync(chapterFile);
         return JSON.parse(items);
     }
-    /*fs.readdir('./data/bookCheck', (err, files) => {
-        files.forEach(file => {
-          console.log(file);
-        });
-      });*/
     return [];
 }
+function getBookChapters(bookId, pageSize, page){
+    const chapters = getChapters(bookId)
+        .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : 0)
+    const pageNum = (page * pageSize > chapters.length) ? 0 : page - 1;
+    return { chapters: chapters.slice(pageNum * pageSize, (pageNum + 1) * pageSize), chapterCount: chapters.length };
+}
+
 function updateBook(bookList, bookId, book)
 {
-    bookList.forEach(b =>{
-        if (b.Id == bookId)
-        {
-            b = book;
-        }
-    })
+    let foundItem = bookList.findIndex(x => x.Id == parseInt(bookId))
+    bookList[foundItem] = book;
     return bookList;
 }
 async function saveBookList(bookList){
@@ -314,7 +63,6 @@ async function saveBookList(bookList){
     fs.writeFile("./data/bookcheck/readingList.json", data, (err) =>{
         if (err) throw err;
         console.log("Reading list updated")
-
     })
 }
 async function saveChapters(bookId, chapterList){
@@ -323,7 +71,6 @@ async function saveChapters(bookId, chapterList){
     fs.writeFile(chapterFile, data, (err) =>{
         if (err) throw err;
         console.log("Chapter list updated")
-
     })
 }
 async function checkBook(browser, bookId){
@@ -340,15 +87,24 @@ async function checkBook(browser, bookId){
     }
 }
 async function checkBookAtSite(browser, bookId, siteId){
-    const book = getReadingList().find(x => x.Id === bookId);
+    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
     const updatedBook = await checkBook_internal(browser, book, siteId);
     if (updatedBook == null)
     {
+        console.log("Unable to parse book. There may be an issue with the site or with the url.");
+        // Set attempted
+        book.Sites.forEach(s =>{
+            if (siteId === null || s.SiteId == siteId) {
+                s.LastAttempted = new Date(Date.now());
+            }
+        })
+        const bookList = updateBook(getReadingList(), bookId, {...book})
+        saveBookList(bookList);
         throw "Unable to parse book. There may be an issue with the site or with the url.";
     }
     else if (updatedBook.hasChanged)
     {
-        const bookList = updateBook(getReadingList(), bookId, updatedBook)
+        const bookList = updateBook(getReadingList(), bookId, updatedBook.item)
         saveBookList(bookList);
     }
 }
@@ -356,15 +112,12 @@ async function checkBook_internal(browser, book, site){
     let rtrn = null;
     console.log(`Checking ${book.Title} (#${book.Id})...`)
     const existingChapters = getChapters(book.Id);
-    //console.log(book);
+    
     await book.Sites.reduce(async (undefined, s) => {
-        //console.log(s)
         if (site === null || s.SiteId == site)
         {
-            //console.log(s);
             const tempCheckSite = await checkSiteForChapters(browser, book, s, getChapters(book.Id));
-            if (tempCheckSite != null)
-            {
+            if (tempCheckSite != null) {
                 rtrn = tempCheckSite;
                 return tempCheckSite;
             }
@@ -374,45 +127,40 @@ async function checkBook_internal(browser, book, site){
 }
 async function checkSiteForChapters(browser, book, site, existingChapters)
 {
-    //console.log(site)
     let rtrn = { hasChanged: false, item: book}
     let chapterUpdate = false;
     site.LastAttempted = new Date(Date.now());
-    const parsedContent = await parseContents(browser, site.Url, false, getSiteConfig())
-    if (parsedContent != null)
-    {
+    const parsedContent = await parseHelper.parseContents(browser, site.Url, false, getSiteConfig())
+
+    if (parsedContent != null) {
         site.LastSuccessful = new Date(Date.now());
         rtrn.hasChanged = true
         if (rtrn.item.Title != parsedContent.title)
         {
-            if (isNullOrWhiteSpace(rtrn.item.Title))
-            {
+            if (helper.isNullOrWhiteSpace(rtrn.item.Title)){
                 rtrn.item.Title = parsedContent.title;
             }
             else
             {
                 let matchFound = false;
                 rtrn.item.AltTitles.forEach(t =>{
-                    if (t === parsedContent.title)
-                    {
+                    if (t === parsedContent.title) {
                         matchFound = true;
                     }
                 })
-                if (!matchFound)
-                {
+                if (!matchFound) {
                     rtrn.item.AltTitles.push(parsedContent.title);
                 }
             }
         }
 
-        if (site.Image != parsedContent.image && !isNullOrWhiteSpace(parsedContent.image))
-        {
+        if (site.Image != parsedContent.image && !genericHelper.isNullOrWhiteSpace(parsedContent.image)) {
             site.Image = parsedContent.image;
         }
 
         if (existingChapters === null)
             existingChapters = []
-            
+        
         parsedContent.chapterList.forEach(c => {
             let exists = false;
             existingChapters.some(e => {
@@ -421,44 +169,35 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
                 {
                     exists = true;
                     e.Links.forEach(l => {
-                        if (l.SiteId == site.SiteId)
-                        {
+                        if (l.SiteId == site.SiteId) {
                             linkFound = true;
-                            if (l.HRef != c.hRef)
-                            {
+                            if (l.HRef != c.hRef) {
                                 l.HRef = c.hRef;
                                 chapterUpdate = true;
                             }
-                            if (l.DateUploaded != c.dateUploaded)
-                            {
+                            if (l.DateUploaded != c.dateUploaded) {
                                 l.DateUploaded = c.dateUploaded
                                 chapterUpdate = true;
                             }
-                            if (l.ChapterTitle != c.chapterTitle)
-                            {
+                            if (l.ChapterTitle != c.chapterTitle) {
                                 l.ChapterTitle = c.chapterTitle
                                 chapterUpdate = true;
                             }
                         }                        
                     })
-                    if (!linkFound)
-                    {
-                        e.Links.push (
-                            {
-                                SiteId: site.SiteId,
-                                ChapterTitle: c.chapterTitle,
-                                HRef: c.hRef,
-                                DateUploaded: c.dateUploaded
-                            }
-                        );
+                    if (!linkFound) {
+                        e.Links.push ({
+                            SiteId: site.SiteId,
+                            ChapterTitle: c.chapterTitle,
+                            HRef: c.hRef,
+                            DateUploaded: c.dateUploaded
+                        });
                         chapterUpdate = true;
                     }
                     return true;
                 }
-                else if (e.chapterNumber === null && c.chapterNumber === null)
-                {
+                else if (e.chapterNumber === null && c.chapterNumber === null) {
                     throw "Both null. Not sure javascript will ever hit here."
-                    return true;
                 }
             })
             if (!exists){
@@ -481,20 +220,145 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
 
         })
     }
-    else
-    {
+    else {
         console.log(`Could not parse ${book.Title} at ${site.Url}`)
         return null
     }
-    if (chapterUpdate){
-
-        //console.log("SAVE CHAPTERS HERE")
-        // save chapters
+    if (chapterUpdate) {
         await saveChapters(book.Id, existingChapters);
-        //console.log(rtrn);
     }
-    return rtrn;        
+    return rtrn;
 }
+async function flagAllRead(bookId){
+    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
+    let existingChapters = getChapters(book.Id);
+
+    existingChapters.forEach(c => {
+        if (!c.Read)
+            c.Read = true;
+    })
+    saveChapters(bookId, existingChapters)
+}
+async function flagAllUnread(bookId){
+    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
+    let existingChapters = getChapters(book.Id);
+
+    existingChapters.forEach(c => {
+        if (c.Read)
+            c.Read = false;
+    })
+    saveChapters(bookId, existingChapters)
+}
+async function flagRead(bookId, chapterNumber){
+    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
+    let existingChapters = getChapters(book.Id);
+
+    existingChapters.forEach(c => {
+        if (!c.Read && c.ChapterNumber.toString() === chapterNumber.toString())
+            c.Read = true;
+    })
+    saveChapters(bookId, existingChapters)
+}
+async function flagUnread(bookId, chapterNumber){
+    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
+    let existingChapters = getChapters(book.Id);
+
+    existingChapters.forEach(c => {
+        if (c.Read && c.ChapterNumber.toString() === chapterNumber.toString())
+            c.Read = false;
+    })
+    saveChapters(bookId, existingChapters)
+}
+function mergeListBookStatus(bookList){
+    const newList = bookList.map(b => mergeBookStatus(b))
+    return [...newList];
+}
+function mergeBookStatus(book){
+    const chapterList = getChapters(book.Id)
+    let lastReadChapter = null;
+    book.Sites = book.Sites.map(s => {
+        let siteChapterLinks = []
+        //console.log(b.Id)
+        chapterList.forEach(c => {
+            c.Links.forEach(l => {                
+                // where site Ids match
+                if (l.SiteId === s.SiteId) {
+                    siteChapterLinks.push({ChapterNumber: c.ChapterNumber, ChapterTitle: c.ChapterTitle, Read: c.Read, ...l});
+                }
+                // where site Urls match
+                else if (l.SiteId == "00000000-0000-0000-0000-000000000000" && l.HRef.match(s.Url)) {
+                    siteChapterLinks.push({ChapterNumber: c.ChapterNumber, ChapterTitle: c.ChapterTitle, Read: c.Read, ...l});
+                }                    
+            })
+        })
+        const lateReadSiteChapter = siteChapterLinks.filter(sc => sc.Read)
+            .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : a.DateUploaded > b.DateUploaded ? -1 : a.DateUploaded < b.DateUploaded ? 1 : 0)[0]
+        
+        lastReadChapter = (lastReadChapter) ? 
+            (lastReadChapter.ChapterNumber < lateReadSiteChapter.ChapterNumber) ?
+            lateReadSiteChapter :
+            (lastReadChapter.ChapterNumber > lateReadSiteChapter.ChapterNumber) ?
+            lastReadChapter :
+            (lastReadChapter.DateUploaded < lateReadSiteChapter.DateUploaded) ?
+            lateReadSiteChapter : lastReadChapter
+            : lateReadSiteChapter
+
+        let tempSite = {...s, 
+            CountRead: siteChapterLinks.filter(sc => sc.Read).length, 
+            CountUnread: siteChapterLinks.filter(sc => sc.Read === false).length, 
+            LastPosted: helper.maxDate(siteChapterLinks, 'DateUploaded'), 
+            LastChapterRead: lateReadSiteChapter
+        }
+        tempSite = {...tempSite, Status: getStatusCategory(tempSite)}
+        return tempSite
+    })
+    const siteSummary = {
+        CountRead: helper.sum(book.Sites, 'CountRead'),
+        CountUnread: helper.sum(book.Sites, 'CountUnread'),
+        LastPosted: helper.maxDate(book.Sites, 'LastPosted'),
+        LastAttempted: helper.maxDate(book.Sites, 'LastAttempted'),
+        LastSuccessful: helper.maxDate(book.Sites, 'LastSuccessful')
+    }
+    book.Status = getStatusCategory(siteSummary)
+    book.LastChapterRead = lastReadChapter
+    book.CountRead = chapterList.filter(sc => sc.Read).length
+    book.CountUnread = chapterList.filter(sc => sc.Read === false).length
+    // temporary cleanup: how many chapters aren't in sites?
+    if (siteSummary.CountRead + siteSummary.CountUnread < chapterList.length)
+        console.log(`${chapterList.length - (siteSummary.CountRead + siteSummary.CountUnread)} chapters not matched to sites for book ${book.Id} (${book.Title})`)
+    return book;
+}
+function getStatusCategory(bookSite)
+{
+    if (bookSite.CountUnread + bookSite.CountRead === 0)
+        return "pending check"
+
+    if (bookSite.LastAttempted == null)
+        return "never checked"
+        
+    if (new Date(bookSite.LastSuccessful) < new Date(bookSite.LastAttempted))
+        return "check failed"
+
+    const lastCheckedDays = Math.floor((new Date() - new Date(bookSite.LastSuccessful))/(1000*60*60*24))
+    const lastPostedDays = Math.floor((new Date() - bookSite.LastPosted)/(1000*60*60*24))
+
+    if (lastCheckedDays < 30 && lastPostedDays > 60)
+        return "no recent updates"
+
+    if (lastCheckedDays > 30)
+        return "no recent check"
+        
+    if (bookSite.CountUnread > 0)
+        return "more to read"
+
+    if (bookSite.CountRead > 0)
+        return "up to date"
+    
+    return "unknown"
+}
+// Action Item: Add status to book items
+// Action Item: Add unread counts to book items
+
 /*
 (async () => {
     const browser = await webHelper.getBrowser(false);
@@ -518,4 +382,4 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
 })()*/
 
 
-module.exports = { getSites, getSiteConfig, getBookList, getFolders, getChapters, removeBook, checkBook, checkBookAtSite };
+module.exports = { getSites, getSiteConfig, getBookList, getFolders, getChapters, getBookChapters, removeBook, checkBook, checkBookAtSite, flagAllRead, flagAllUnread, flagRead, flagUnread, mergeBookStatus, mergeListBookStatus};

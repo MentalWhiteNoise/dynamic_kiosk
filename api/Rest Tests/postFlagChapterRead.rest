@@ -1,1 +1,3 @@
-POST http://localhost:3000/books/2/chapters/10/flagRead HTTP/1.1
+#POST http://localhost:3000/book/2/chapter/10/flagRead HTTP/1.1
+
+POST http://localhost:3000/book/27/chapter/1738/flagRead HTTP/1.1

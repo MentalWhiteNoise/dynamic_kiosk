@@ -12,10 +12,6 @@ app.use(bodyParser.json());
 app.use(cors())
 const port = 3000
 
-app.get('/', (req, res) => {
-    res.send('Hello World!')
-})
-
 app.get('/sites', (req, res) => {
     const siteList = bookHelper.getSites()
     res.json(siteList)
@@ -31,12 +27,13 @@ app.get('/folders', (req, res) => {
 app.get('/folder/:folderName/books', (req, res) => {
     const bookList = bookHelper.getBookList()
     const filteredList = bookList.filter(x => x.Folder.toLowerCase() == req.params.folderName.toLowerCase())
-    res.json(filteredList)
+    const mergedList = bookHelper.mergeListBookStatus(filteredList)
+    res.json(mergedList)
 })
 app.get('/book/:bookId', (req, res) => {
     const bookList = bookHelper.getBookList()
-    const filteredList = bookList.find(x => x.Id.toString() === req.params.bookId)
-    res.json(filteredList)
+    const book = bookList.find(x => x.Id.toString() === req.params.bookId)
+    res.json(bookHelper.mergeBookStatus(book))
 })
 app.get('/book/:bookId/chapters/unread', (req, res) => {
     const chapters = bookHelper.getChapters(req.params.bookId)
@@ -60,12 +57,21 @@ app.get('/book/:bookId/chapters/lastread', (req, res) => {
     }
 })
 app.get('/book/:bookId/chapters', (req, res) => {
-    const chapters = bookHelper.getChapters(req.params.bookId)
+    console.log(req.query)
+    const chapters = bookHelper.getBookChapters(req.params.bookId, req.query.pageSize | 20, req.query.page | 1)
+    const totalPages = Math.floor(chapters.chapterCount / (req.query.pageSize | 20)) + 1
+    chapters.pageCount = totalPages;
+    if (totalPages > req.query.page | 1)
+        chapters.next = `/book/${req.params.bookId}/chapters/${(req.query.page | 1) + 1}`
     res.json(chapters)
 })
 
+// Action Item: Add paging & sorting to book lists
+// Action Item: Add paging to chapter lists
+// Action Item: Queue up update check(?)
+
 app.post('/book/:bookId/checkForUpdates', async (req, res) => {    
-    const browser = await webHelper.getBrowser(false);
+    const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
     try{
         await bookHelper.checkBook(browser, req.params.bookId);
     }
@@ -79,7 +85,8 @@ app.post('/book/:bookId/checkForUpdates', async (req, res) => {
     }
 })
 app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => { 
-    const browser = await webHelper.getBrowser(false);
+    // add optional parameter for display browser
+    const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
     try{
         await bookHelper.checkBookAtSite(browser, req.params.bookId, req.params.siteId);
     }
@@ -92,7 +99,7 @@ app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => {
         res.sendStatus(200);
     }
     
-    res.send(`Checking for updates for book ${req.params.bookId}`)
+    //res.send(`Checking for updates for book ${req.params.bookId}`)
 })
 
 app.get('/books/find', (req, res) => {
@@ -189,17 +196,30 @@ app.post('/book/:bookId/site/:siteId', (req, res) => {
     console.log(req.body)
     res.send(`Attempting to update link ${req.params.siteId} for book ${req.params.bookId}`)
 })
-app.post('/book/:bookId/chapter/:chapter/flagRead', (req, res) => {
 
+app.delete('/book/:bookId/site/:siteId/allChapters', (req, res) => {
+    // must have more than zero left...
+    res.status(500).send('TO BE DEVELOPED!')
+})
+app.delete('/book/:bookId/site/:siteId/chapter/:chapter', (req, res) => {
+    // must have more than zero left...
+    res.status(500).send('TO BE DEVELOPED!')
+})
+
+app.post('/book/:bookId/chapter/:chapter/flagRead', (req, res) => {
+    bookHelper.flagRead(req.params.bookId, req.params.chapter)
     res.send(`Flag chapter ${req.params.chapter} read for book ${req.params.bookId}`)
 })
 app.post('/book/:bookId/chapter/:chapter/flagUnread', (req, res) => {
+    bookHelper.flagUnread(req.params.bookId, req.params.chapter)
     res.send(`Flag chapter ${req.params.chapter} unread for book ${req.params.bookId}`)
 })
 app.post('/book/:bookId/chapters/flagRead', (req, res) => {
+    bookHelper.flagAllRead(req.params.bookId)
     res.send(`Flag all chapters read for book ${req.params.bookId}`)
 })
 app.post('/book/:bookId/chapters/flagUnread', (req, res) => {
+    bookHelper.flagAllUnread(req.params.bookId)
     res.send(`Flag all chapters unread for book ${req.params.bookId}`)
 })
 

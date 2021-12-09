@@ -1,11 +1,13 @@
 import React, {} from "react";
-import { FormControl, Paper, FormLabel, TextField } from "@mui/material";
+import { FormControl, Paper, FormLabel, TextField, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import {ExpandMore} from '@mui/icons-material'
 import NavigationSection from "./NavigationSection";
 import ParsingSection from "./ParsingSection";
 //import { Link } from "react-router-dom";
 
 export default function SiteForm(props) {
-    const {site, onSiteUpdate} = props;
+    const {site, onSiteUpdate/*, hasChanged*/} = props;
+    const [expanded, setExpanded] = React.useState(null);
     if (site == null) return <></>
     const handleParsingMethodChange = (array, index, value) =>
     {
@@ -23,10 +25,19 @@ export default function SiteForm(props) {
         onSiteUpdate({...site})
         
     }
-    const handleParsiongMethodAdd = (array) =>
+    const handleParsingMethodAdd = (array) =>
     {
         array.push({method: "readPast", string: ""})
         onSiteUpdate({...site})
+    }
+    const handleReorder = (array, source, destination) => {
+        const [removed] = array.splice(source, 1);
+        array.splice(destination, 0, removed);
+        onSiteUpdate({...site})
+    };
+    const handleExpand = (panel) =>{
+        console.log(panel)
+        setExpanded(panel);
     }
     return (
         <>
@@ -54,6 +65,9 @@ export default function SiteForm(props) {
                 site.postLoad = (checked) ? [{method: "wait", properties: {timeout: 1000}}] : null;
                 onSiteUpdate({...site});
             }}
+            onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "postLoad" : null)}
+            expanded={expanded === "postLoad"}
         />
         <ParsingSection 
             label="Title"
@@ -61,7 +75,10 @@ export default function SiteForm(props) {
             onMethodChange={handleParsingMethodChange}
             onStringChange={handleParsingStringChange}
             onRemove={handleParsingMethodRemove}
-            onAdd={handleParsiongMethodAdd}
+            onAdd={handleParsingMethodAdd}
+            onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "title" : null)}
+            expanded={expanded === "title"}
         />
         <ParsingSection
             label="Alternate Title"
@@ -70,11 +87,14 @@ export default function SiteForm(props) {
             onMethodChange={handleParsingMethodChange}
             onStringChange={handleParsingStringChange}
             onRemove={handleParsingMethodRemove}
-            onAdd={handleParsiongMethodAdd}
+            onAdd={handleParsingMethodAdd}
+            onReorder={handleReorder}
             onToggle={(checked) => {
                 site.altTitle = (checked) ? [{method: "readPast", string: ""}] : null;                
                 onSiteUpdate({...site});
             }}
+            onExpandChange={(exp) => handleExpand(exp ? "altTitle" : null)}
+            expanded={expanded === "altTitle"}
         />
         <ParsingSection 
             label="Image"
@@ -82,7 +102,10 @@ export default function SiteForm(props) {
             onMethodChange={handleParsingMethodChange}
             onStringChange={handleParsingStringChange}
             onRemove={handleParsingMethodRemove}
-            onAdd = {handleParsiongMethodAdd}
+            onAdd = {handleParsingMethodAdd}
+            onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "image" : null)}
+            expanded={expanded === "image"}
         />
         <ParsingSection 
             label="Chapter Text"
@@ -90,8 +113,14 @@ export default function SiteForm(props) {
             onMethodChange={handleParsingMethodChange}
             onStringChange={handleParsingStringChange}
             onRemove={handleParsingMethodRemove}
-            onAdd = {handleParsiongMethodAdd}
+            onAdd = {handleParsingMethodAdd}
+            onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "chaptText" : null)}
+            expanded={expanded === "chaptText"}
         />
+        <Accordion expanded={expanded === "splitChapt"} onChange={(e, i) => {handleExpand(i ? "splitChapt" : null)}}>
+        <AccordionSummary expandIcon={<ExpandMore />}><FormLabel>Split Chapter Text</FormLabel></AccordionSummary>
+        <AccordionDetails>
         <FormControl>
         <TextField 
             size="small"
@@ -105,6 +134,8 @@ export default function SiteForm(props) {
             }}
             />
         </FormControl>
+        </AccordionDetails>
+        </Accordion>
         <Paper>
             <FormLabel>For Each Chapter Text...</FormLabel>
             Custom Filter Logic... In vs Not In... 
@@ -114,7 +145,10 @@ export default function SiteForm(props) {
                 onMethodChange={handleParsingMethodChange}
                 onStringChange={handleParsingStringChange}
                 onRemove={handleParsingMethodRemove}
-                onAdd = {handleParsiongMethodAdd}
+                onAdd = {handleParsingMethodAdd}
+                onReorder={handleReorder}
+                onExpandChange={(exp) => handleExpand(exp ? "hRef" : null)}
+                expanded={expanded === "hRef"}
             />
             <ParsingSection 
                 label="Chapter Title"
@@ -122,7 +156,10 @@ export default function SiteForm(props) {
                 onMethodChange={handleParsingMethodChange}
                 onStringChange={handleParsingStringChange}
                 onRemove={handleParsingMethodRemove}
-                onAdd = {handleParsiongMethodAdd}
+                onAdd = {handleParsingMethodAdd}
+                onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "chapTitle" : null)}
+            expanded={expanded === "chapTitle"}
             />
             <ParsingSection 
                 label="Date Uploaded"
@@ -130,7 +167,10 @@ export default function SiteForm(props) {
                 onMethodChange={handleParsingMethodChange}
                 onStringChange={handleParsingStringChange}
                 onRemove={handleParsingMethodRemove}
-                onAdd = {handleParsiongMethodAdd}
+                onAdd = {handleParsingMethodAdd}
+                onReorder={handleReorder}
+                onExpandChange={(exp) => handleExpand(exp ? "uploaded" : null)}
+                expanded={expanded === "uploaded"}
             />
             <ParsingSection 
                 label="Chapter Number"
@@ -138,7 +178,10 @@ export default function SiteForm(props) {
                 onMethodChange={handleParsingMethodChange}
                 onStringChange={handleParsingStringChange}
                 onRemove={handleParsingMethodRemove}
-                onAdd = {handleParsiongMethodAdd}
+                onAdd = {handleParsingMethodAdd}
+                onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "chaptNum" : null)}
+            expanded={expanded === "chaptNum"}
             />
         </Paper>
         <ParsingSection
@@ -148,11 +191,14 @@ export default function SiteForm(props) {
             onMethodChange={handleParsingMethodChange}
             onStringChange={handleParsingStringChange}
             onRemove={handleParsingMethodRemove}
-            onAdd={handleParsiongMethodAdd}
+            onAdd={handleParsingMethodAdd}
             onToggle={(checked) => {
                 site.multiPage = {nextPageUrl: (checked) ? [{method: "readPast", string: ""}] : null} 
                 onSiteUpdate({...site});
             }}
+            onReorder={handleReorder}
+            onExpandChange={(exp) => handleExpand(exp ? "nextUrl" : null)}
+            expanded={expanded === "nextUrl"}
         />
     </>)    
 }

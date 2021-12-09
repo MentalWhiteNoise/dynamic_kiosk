@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const helper = require('./genericHelper');
   
 //const browser = await puppeteer.launch({executablePath: '/usr/bin/chromium-browser'});
 /*const browser = await puppeteer.launch({
@@ -24,16 +25,19 @@ const getUrlContents = async (browser, url, navigationMethods) =>{
     try {
         const page = await browser.newPage()
         await page.setJavaScriptEnabled();
-        await page.goto(url);
+        await page.goto(url, { waitUntil: 'networkidle2' });
+        //await sleep(500);
+
         try{
             await applyNavigation(navigationMethods, page);
         }
-        catch{
-            await page.close();
+        catch (e){
+            console.log("Error encountered applying navigation methods: ", e)
             return null;
         }
         const contents = await page.content();
-        await page.close();
+        //await sleep(500);
+        try{await page.close();} catch{}
         return contents;
     }
     catch (ex){
@@ -44,22 +48,23 @@ const getUrlContents = async (browser, url, navigationMethods) =>{
 
 async function applyNavigation(navigationMethods, page)
 {
+    //console.log("applyNavigation: ", navigationMethods)
     if (navigationMethods == null || navigationMethods.length === 0)
         return;
-    await sleep(500);
-    navigationMethods.forEach(async navMethod => {
-        switch (navMethod.Method)
+    await helper.sleep(500);
+    await navigationMethods.forEach(async navMethod => {
+        switch (navMethod.method)
         {
             case "clickElement":
                 const selector = navMethod.properties.selector;
                 await page.click(selector);
-                await sleep(500);
+                await helper.sleep(500);
                 break;
             case "enterInput":
                 const inputSelector = navMethod.properties.selector;
                 const inputText = navMethod.properties.text;
                 await page.type(inputSelector, inputText);
-                await sleep(500);
+                await helper.sleep(500);
                 break;
             case "clickEachElement":
                 const multiSelector = navMethod.properties.selector;
@@ -68,25 +73,20 @@ async function applyNavigation(navigationMethods, page)
                 {
                     await item.click();
                 })
-                await sleep(500);
+                await helper.sleep(500);
                 break;
             case "waitForElement":
                 const waitForSelector = navMethod.properties.selector;
                 const timeout = parseInt(navMethod.properties.timeout | "1000");
-                await page.waitForSelector(waitForSelector, { Timeout: timeout });
+                await page.waitForSelector(waitForSelector, { Timeout: timeout })
                 break;
             case "wait":
                 const waitTimeout = parseInt(navMethod.properties.timeout | "1000");
-                await sleep(waitTimeout);
+                await helper.sleep(waitTimeout);
                 break;
             default:
-                // eslint-disable-next-line no-throw-literal
                 throw "Unexpected method: " + navMethod.Method;
         }
-    });
-
+    })
 }
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-module.exports = { getBrowser, getUrlContents, sleep };
+module.exports = { getBrowser, getUrlContents };

@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from "react";
-import { Select, MenuItem, FormControl, InputLabel, Paper } from "@mui/material";
+import { Select, MenuItem, FormControl, InputLabel, Paper, IconButton, Tooltip } from "@mui/material";
+import {Save, Cancel, Edit, ContentCopy} from '@mui/icons-material'
 import SiteForm from "./SiteForm";
 //import { Link } from "react-router-dom";
 
@@ -8,6 +9,7 @@ export default function SiteConfig(props){
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [site, setSite] = useState(null);
+    const [hasChanged, setHasChanged] = useState(false);
 
     useEffect(() => {
         fetch('http://localhost:3000/siteconfig')
@@ -29,35 +31,12 @@ export default function SiteConfig(props){
             })
     }, [])
     const handleSiteChange = (newSite) => {
+        setHasChanged(false)
         setSite(data.find(x => x.site === newSite));
-    }
-    const handleParsingMethodChange = (array, index, value) =>
-    {
-        array[index].method = value;
-        let newSite = {...site};
-        setSite(newSite)
-    }
-    const handleParsingStringChange = (array, index, value) =>
-    {
-        array[index].string = value;
-        let newSite = {...site};
-        setSite(newSite)
-    }
-    const handleParsingMethodRemove = (array, index) =>
-    {
-        array.splice(index, 1);
-        let newSite = {...site};
-        setSite(newSite)
-        
-    }
-    const handleParsiongMethodAdd = (array) =>
-    {
-        array.push({method: "readPast", string: ""})
-        let newSite = {...site};
-        setSite(newSite)
     }
     const handleSiteUpdate = (newSite) =>
     {
+        setHasChanged(true)
         setSite(newSite)
     }
 
@@ -65,10 +44,9 @@ export default function SiteConfig(props){
     if (error) return "Error...";
     //console.log(site)
     return (<Paper>
+
         <h1>Edit Site Scraping Configuration</h1>
-        Add buttons for rename, copy, save, (and cancel?)<br/>
-        Check out sticky subheader in lists for tracking which section I'm in, the Collapse section or even accordions for editing the pieces, <br/>
-        Possibly consider the data grid object, or opening dialogs for editing sections... event tabs<br/>
+        <Paper>
         <FormControl>
         <InputLabel id="site-select-label">Site</InputLabel>
         <Select
@@ -81,14 +59,16 @@ export default function SiteConfig(props){
                 <MenuItem key={i} value={x.site} >{x.site}</MenuItem>
             ))}
         </Select>
+        </FormControl>
+        <Tooltip title="Save Changes"><IconButton disabled={!hasChanged}><Save/></IconButton></Tooltip>
+        <Tooltip title="Cancel"><IconButton disabled={!hasChanged}><Cancel/></IconButton></Tooltip>
+        <Tooltip title="Edit Url"><IconButton><Edit/></IconButton></Tooltip>
+        <Tooltip title="Copy to New"><IconButton disabled={hasChanged}><ContentCopy/></IconButton></Tooltip>
+        </Paper>
         <SiteForm
             site={site}
-            onParsingMethodChange={handleParsingMethodChange}
-            onParsingStringChange={handleParsingStringChange}
-            onParsingMethodRemove={handleParsingMethodRemove}
-            onParsiongMethodAdd={handleParsiongMethodAdd}
+            hasChanged={hasChanged}
             onSiteUpdate={handleSiteUpdate}
         />
-        </FormControl>
         </Paper>)
 }
