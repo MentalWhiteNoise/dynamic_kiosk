@@ -66,7 +66,7 @@ async function saveBookList(bookList){
     })
 }
 async function saveChapters(bookId, chapterList){
-    const chapterFile = `./data/bookcheck/Chapters_${bookId}.json`
+    const chapterFile = `./data/bookCheck/Chapters_${bookId}.json`
     let data = JSON.stringify(chapterList, null, 2);
     fs.writeFile(chapterFile, data, (err) =>{
         if (err) throw err;
@@ -74,7 +74,7 @@ async function saveChapters(bookId, chapterList){
     })
 }
 async function checkBook(browser, bookId){
-    const book = getReadingList().find(x => x.Id === bookId);
+    const book = getReadingList().find(x => x.Id === parseInt(bookId));
     const updatedBook = await checkBook_internal(browser, book, null);
     if (updatedBook == null)
     {
@@ -87,7 +87,7 @@ async function checkBook(browser, bookId){
     }
 }
 async function checkBookAtSite(browser, bookId, siteId){
-    const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
+    const book = getReadingList().find(x => x.Id === parseInt(bookId));
     const updatedBook = await checkBook_internal(browser, book, siteId);
     if (updatedBook == null)
     {
