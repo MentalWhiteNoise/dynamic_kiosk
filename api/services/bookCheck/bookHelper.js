@@ -37,7 +37,7 @@ async function removeBook(bookId){
 
 }
 function getChapters(bookId){
-    const chapterFile = `./data/bookcheck/Chapters_${bookId}.json`
+    const chapterFile = `./data/bookCheck/Chapters_${bookId}.json`
     if (fs.existsSync(chapterFile))
     {
         const items = fs.readFileSync(chapterFile);
@@ -60,7 +60,7 @@ function updateBook(bookList, bookId, book)
 }
 async function saveBookList(bookList){
     let data = JSON.stringify(bookList, null, 2);
-    fs.writeFile("./data/bookcheck/readingList.json", data, (err) =>{
+    fs.writeFile("./data/bookCheck/readingList.json", data, (err) =>{
         if (err) throw err;
         console.log("Reading list updated")
     })
