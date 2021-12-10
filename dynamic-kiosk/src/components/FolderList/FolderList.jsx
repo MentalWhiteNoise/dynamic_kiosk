@@ -7,7 +7,7 @@ export default function FolderList(props){
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     useEffect(() => {
-        fetch('http://localhost:3000/folders')
+        fetch('http://localhost:3080/folders')
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -27,7 +27,7 @@ export default function FolderList(props){
     }, [])
 
     if (loading) return "Loading...";
-    if (error) return "Error...";
+    if (error) return <>Error... {error.toString()}</>;
 
     //console.log(data)
     return (<>

@@ -19,7 +19,7 @@ export default function BookPage(props){
     const [folderList, setFolderList] = useState([]);
     useEffect(() => {loadBook()}, [bookId])
     useEffect(() => {
-        fetch('http://localhost:3000/folders')
+        fetch('http://localhost:3080/folders')
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -41,7 +41,7 @@ export default function BookPage(props){
         setUnsavedChanges(true)
     }
     const loadBook = () =>{
-        fetch(`http://localhost:3000/book/${bookId}`)
+        fetch(`http://localhost:3080/book/${bookId}`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -59,7 +59,7 @@ export default function BookPage(props){
             .finally(() => {
                 setBookLoading(false);
             })
-        fetch(`http://localhost:3000/book/${bookId}/chapters`)
+        fetch(`http://localhost:3080/book/${bookId}/chapters`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -90,20 +90,20 @@ export default function BookPage(props){
         handlePropertyChange(altTitles, "AltTitles")
     }
     const handleFlagRead = (chapterNumber) => {
-        fetch(`http://localhost:3000/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 loadBook(bookId)
             })
     }
     const handleFlagUnread = (chapterNumber) => {
-        fetch(`http://localhost:3000/book/${bookId}/chapter/${chapterNumber}/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/chapter/${chapterNumber}/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 loadBook(bookId)
             })
     }
     const handleCheckForUpdate = (bookId, siteId) =>{
         setCheckingTriggered(true);
-        fetch(`http://localhost:3000/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(response =>{
                 if (response.ok){
                     return;

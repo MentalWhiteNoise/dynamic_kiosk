@@ -12,7 +12,7 @@ export default function SiteConfig(props){
     const [hasChanged, setHasChanged] = useState(false);
 
     useEffect(() => {
-        fetch('http://localhost:3000/siteconfig')
+        fetch('http://localhost:3080/siteconfig')
             .then(response =>{
                 if (response.ok){
                     return response.json();

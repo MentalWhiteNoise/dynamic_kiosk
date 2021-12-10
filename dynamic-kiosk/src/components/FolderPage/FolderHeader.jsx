@@ -16,12 +16,6 @@ export default function FolderHeader(props){
       setOpen(false);
     };
     return (<Paper>
-        I started adding more... but I think I need to move more logic into the api. I am doing too much client side data manipulation. Also, I may want to page large book counts from the api side...
-        <br/>Action Items: 
-        <ul>
-            <li>Add remaining to check count to folder header</li>
-            <li>Add paging and sorting</li>
-        </ul>
         <table style={{width: "100%"}}>
             <tbody>
             <tr>

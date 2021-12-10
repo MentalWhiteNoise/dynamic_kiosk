@@ -22,7 +22,7 @@ export default function BookListItem(props){
 
 
     const reloadBook = (bookId) => {
-        fetch(`http://localhost:3000/book/${bookId}`)
+        fetch(`http://localhost:3080/book/${bookId}`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -38,7 +38,7 @@ export default function BookListItem(props){
     }
     const handleCheckForUpdate = (bookId, siteId) =>{
         setCheckingTriggered(true);
-        fetch(`http://localhost:3000/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(response =>{
                 if (response.ok){
                     return;
@@ -58,11 +58,11 @@ export default function BookListItem(props){
     }
 
     const handleFlagAllUnread = (bookId) => {
-        fetch(`http://localhost:3000/book/${bookId}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => reloadBook(bookId))
     }
     const handleFlagAllRead = (bookId) => {
-        fetch(`http://localhost:3000/book/${bookId}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${bookId}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 console.log(checkResponse)
                 reloadBook(bookId)
@@ -70,10 +70,10 @@ export default function BookListItem(props){
     }
     
     const handleFlagRead = (bookId, chapterNumber) => {
-        console.log(bookId, chapterNumber)
-        fetch(`http://localhost:3000/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        //console.log(bookId, chapterNumber)
+        fetch(`http://localhost:3080/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
-                console.log(checkResponse)
+                //console.log(checkResponse)
                 reloadBook(bookId)
             })
     }

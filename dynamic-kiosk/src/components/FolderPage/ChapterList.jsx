@@ -9,7 +9,7 @@ const ChapterList = (props) => {
     const [error, setError] = useState(null);
     const {site, onFlagRead, book} = props;
     useEffect(() => {
-        fetch(`http://localhost:3000/book/${book.Id}/chapters/unread`)
+        fetch(`http://localhost:3080/book/${book.Id}/chapters/unread`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -23,7 +23,7 @@ const ChapterList = (props) => {
                 setError(error);
             })
             .finally(() => {
-                console.log("Enabling Stuff...")
+                //console.log("Enabling Stuff...")
                 setLoading(false);
             })
     }, [book])

@@ -19,7 +19,7 @@ export default function ChapterList(props){
     const [selectedLink, setSelectedLink] = useState(null);
     
     useEffect(() => {
-        fetch(`http://localhost:3000/book/${book.Id}/chapters`)
+        fetch(`http://localhost:3080/book/${book.Id}/chapters`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -39,11 +39,11 @@ export default function ChapterList(props){
     }, [book])
     
     const handleFlagAllUnread = () => {
-        fetch(`http://localhost:3000/book/${book.Id}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${book.Id}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => reloadBook(book.Id))
     }
     const handleFlagAllRead = () => {
-        fetch(`http://localhost:3000/book/${book.Id}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`http://localhost:3080/book/${book.Id}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 console.log(checkResponse)
                 reloadBook(book.Id)

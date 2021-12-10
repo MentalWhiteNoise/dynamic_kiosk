@@ -10,7 +10,7 @@ const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors())
-const port = 3000
+const port = 3080
 
 app.get('/sites', (req, res) => {
     const siteList = bookHelper.getSites()
@@ -38,6 +38,14 @@ app.get('/book/:bookId', (req, res) => {
 app.get('/book/:bookId/chapters/unread', (req, res) => {
     const chapters = bookHelper.getChapters(req.params.bookId)
     const filteredList = chapters.filter(x => x.Read == false)
+        .sort((a,b) => {
+            if (a.ChapterNumber > b.ChapterNumber)
+                return 1
+            else if (b.ChapterNumber > a.ChapterNumber)
+                return -1
+            else 
+                return 0
+        })
     res.json(filteredList)
 })
 app.get('/book/:bookId/chapters/lastread', (req, res) => {

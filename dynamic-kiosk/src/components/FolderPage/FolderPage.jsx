@@ -16,11 +16,9 @@ export default function FolderPage(props){
     const [site, setSite] = useState(null);
     const [updateList, setUpdateList] = useState([]);
     const [cancelUpdate, setCancelUpdate] = useState(false);
-    const [sortColumn, setSortColumn] = useState("title");
-    const [sortDesc, setSortDesc] = useState("false");
 
     useEffect(() => {
-        fetch(`http://localhost:3000/folder/${folder}/books`)
+        fetch(`http://localhost:3080/folder/${folder}/books`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -39,7 +37,7 @@ export default function FolderPage(props){
             .finally(() => {
                 setBookListLoading(false);
             })
-        fetch(`http://localhost:3000/sites`)
+        fetch(`http://localhost:3080/sites`)
                 .then(response =>{
                     if (response.ok){
                         return response.json();
@@ -69,7 +67,7 @@ export default function FolderPage(props){
             book.status = "checking"
             setBookList(bookList)
             //setBookList([...bookList])
-            fetch(`http://localhost:3000/book/${bookItem.bookId}/site/${bookItem.siteId}/checkForUpdates`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            fetch(`http://localhost:3080/book/${bookItem.bookId}/site/${bookItem.siteId}/checkForUpdates`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
                 .then(checkResponse => {
                     book.status = "idle"
                     //console.log(bookList)
@@ -117,7 +115,7 @@ export default function FolderPage(props){
     }
     const handleReloadBook =(bookId) =>{
         console.log(`Reload book ${bookId}`)
-        fetch(`http://localhost:3000/book/${bookId}`)
+        fetch(`http://localhost:3080/book/${bookId}`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -138,50 +136,6 @@ export default function FolderPage(props){
                 setBookListLoading(false);
             })
     }
-    const handleSort = (column) => {
-        console.log("handleSort", sortColumn, column, sortDesc)
-        if (column === sortColumn)
-        {
-            setSortDesc(!sortDesc)
-        }
-        else
-        {
-            setSortColumn(column);
-            setSortDesc(false)
-        }
-    }
-    useEffect(() => {
-        if (!bookList || bookListLoading) return
-        console.log("Resorting??")
-        const newList = [...bookList]
-        newList.sort((a,b) => {
-            if (sortColumn === "title")
-            {
-                if (a.Title > b.Title) return (sortDesc) ? 1 : -1
-                if (a.Title < b.Title) return (sortDesc) ? -1 : 1
-                return 0
-            }
-            if (sortColumn === "unread")
-            {
-                if (a.CountUnread > b.CountUnread) return (sortDesc) ? 1 : -1
-                if (a.CountUnread < b.CountUnread) return (sortDesc) ? -1 : 1
-                if (a.Title > b.Title) return (sortDesc) ? 1 : -1
-                if (a.Title < b.Title) return (sortDesc) ? -1 : 1
-                return 0
-            }
-            if (sortColumn === "status")
-            {
-                if (a.Status > b.Status) return (sortDesc) ? 1 : -1
-                if (a.Status < b.Status) return (sortDesc) ? -1 : 1
-                if (a.Title > b.Title) return (sortDesc) ? 1 : -1
-                if (a.Title < b.Title) return (sortDesc) ? -1 : 1
-                return 0
-            }
-            return 0
-        })
-        console.log(newList)
-        setBookList([...newList])
-    }, [sortColumn, sortDesc])
     const loading = siteListLoading || bookListLoading;
     const error = (bookListError && siteListError) ? bookListError + "\n" + siteListError : bookListError || siteListError
     //console.log(site)
@@ -206,9 +160,6 @@ export default function FolderPage(props){
                 selectedSite={site}
                 onReloadBook={handleReloadBook}
                 siteList={siteList}
-                onSort={handleSort}
-                sortColumn={sortColumn}
-                sortDesc={sortDesc}
             />
         )}
     </>)
