@@ -18,7 +18,8 @@ const helper = require('./genericHelper');
     return contents
 })();*/
 const getBrowser = (headless) => { 
-    return puppeteer.launch({headless: headless}); 
+    return puppeteer.launch({headless: headless, executablePath: '/usr/bin/chromium-browser'});
+    //return puppeteer.launch({headless: headless}); 
 }
 
 const getUrlContents = async (browser, url, navigationMethods) =>{
