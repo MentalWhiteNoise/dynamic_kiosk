@@ -3,6 +3,7 @@ import { Select, MenuItem, FormControl, InputLabel, Paper, IconButton, Tooltip }
 import {Save, Cancel, Edit, ContentCopy} from '@mui/icons-material'
 import SiteForm from "./SiteForm";
 //import { Link } from "react-router-dom";
+import ServerAddress from "../../services/api";
 
 export default function SiteConfig(props){
     const [data, setData] = useState(null);
@@ -12,7 +13,7 @@ export default function SiteConfig(props){
     const [hasChanged, setHasChanged] = useState(false);
 
     useEffect(() => {
-        fetch('http://localhost:3080/siteconfig')
+        fetch(`${ServerAddress}/siteconfig`)
             .then(response =>{
                 if (response.ok){
                     return response.json();

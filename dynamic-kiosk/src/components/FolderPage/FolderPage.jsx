@@ -2,6 +2,7 @@ import React, {useEffect, useState} from "react";
 import {useParams} from "react-router-dom";
 import BookList from './BookList'
 import FolderHeader from './FolderHeader'
+import ServerAddress from "../../services/api";
 
 export default function FolderPage(props){
     let { folder } = useParams();
@@ -18,7 +19,7 @@ export default function FolderPage(props){
     const [cancelUpdate, setCancelUpdate] = useState(false);
 
     useEffect(() => {
-        fetch(`http://localhost:3080/folder/${folder}/books`)
+        fetch(`${ServerAddress}/folder/${folder}/books`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -37,7 +38,7 @@ export default function FolderPage(props){
             .finally(() => {
                 setBookListLoading(false);
             })
-        fetch(`http://localhost:3080/sites`)
+        fetch(`${ServerAddress}/sites`)
                 .then(response =>{
                     if (response.ok){
                         return response.json();
@@ -67,7 +68,7 @@ export default function FolderPage(props){
             book.status = "checking"
             setBookList(bookList)
             //setBookList([...bookList])
-            fetch(`http://localhost:3080/book/${bookItem.bookId}/site/${bookItem.siteId}/checkForUpdates`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            fetch(`${ServerAddress}/book/${bookItem.bookId}/site/${bookItem.siteId}/checkForUpdates`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
                 .then(checkResponse => {
                     book.status = "idle"
                     //console.log(bookList)
@@ -115,7 +116,7 @@ export default function FolderPage(props){
     }
     const handleReloadBook =(bookId) =>{
         console.log(`Reload book ${bookId}`)
-        fetch(`http://localhost:3080/book/${bookId}`)
+        fetch(`${ServerAddress}/book/${bookId}`)
             .then(response =>{
                 if (response.ok){
                     return response.json();

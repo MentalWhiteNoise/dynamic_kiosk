@@ -3,6 +3,7 @@ import { Delete, CheckBoxOutlineBlank, CheckBox, OpenInBrowser, Bookmark, Bookma
 import { CircularProgress, Table, TableBody, TableCell, TableRow, IconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "@mui/material";
 import { Box } from "@mui/system";
 import React, {useEffect, useState} from "react";
+import ServerAddress from "../../services/api";
 
 const openInNewTab = (url) => {
     //console.log("here:", url)
@@ -19,7 +20,7 @@ export default function ChapterList(props){
     const [selectedLink, setSelectedLink] = useState(null);
     
     useEffect(() => {
-        fetch(`http://localhost:3080/book/${book.Id}/chapters`)
+        fetch(`${ServerAddress}/book/${book.Id}/chapters`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -39,11 +40,11 @@ export default function ChapterList(props){
     }, [book])
     
     const handleFlagAllUnread = () => {
-        fetch(`http://localhost:3080/book/${book.Id}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${book.Id}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => reloadBook(book.Id))
     }
     const handleFlagAllRead = () => {
-        fetch(`http://localhost:3080/book/${book.Id}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${book.Id}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 console.log(checkResponse)
                 reloadBook(book.Id)

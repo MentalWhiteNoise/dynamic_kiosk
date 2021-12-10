@@ -2,6 +2,7 @@
 import React, {useState, useEffect} from "react";
 import { Table, TableBody, TableCell, TableRow, CircularProgress } from "@mui/material";
 import ChapterListItem from './ChapterListItem'
+import ServerAddress from "../../services/api";
 
 const ChapterList = (props) => {    
     const [chapters, setChapters] = useState(null);
@@ -9,7 +10,7 @@ const ChapterList = (props) => {
     const [error, setError] = useState(null);
     const {site, onFlagRead, book} = props;
     useEffect(() => {
-        fetch(`http://localhost:3080/book/${book.Id}/chapters/unread`)
+        fetch(`${ServerAddress}/book/${book.Id}/chapters/unread`)
             .then(response =>{
                 if (response.ok){
                     return response.json();

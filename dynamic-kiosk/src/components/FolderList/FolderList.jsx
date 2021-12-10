@@ -1,13 +1,14 @@
 import { List, ListSubheader, Paper } from "@mui/material";
 import React, {useState, useEffect} from "react";
 import FolderListItem from "./FolderListItem";
+import ServerAddress from "../../services/api";
 
 export default function FolderList(props){
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     useEffect(() => {
-        fetch('http://localhost:3080/folders')
+        fetch(`${ServerAddress}/folders`)
             .then(response =>{
                 if (response.ok){
                     return response.json();

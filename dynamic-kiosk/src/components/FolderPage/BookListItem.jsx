@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { TableCell, TableRow, IconButton, Badge, Tooltip } from "@mui/material";
 import { Bookmark, BookmarkBorder, Edit, AutoStories } from '@mui/icons-material';
 import BookSiteListItem from "./BookSiteListItem";
+import ServerAddress from "../../services/api";
 
 function openInNewTab(url){
     //console.log("here:", url)
@@ -22,7 +23,7 @@ export default function BookListItem(props){
 
 
     const reloadBook = (bookId) => {
-        fetch(`http://localhost:3080/book/${bookId}`)
+        fetch(`${ServerAddress}/book/${bookId}`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -38,7 +39,7 @@ export default function BookListItem(props){
     }
     const handleCheckForUpdate = (bookId, siteId) =>{
         setCheckingTriggered(true);
-        fetch(`http://localhost:3080/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(response =>{
                 if (response.ok){
                     return;
@@ -58,11 +59,11 @@ export default function BookListItem(props){
     }
 
     const handleFlagAllUnread = (bookId) => {
-        fetch(`http://localhost:3080/book/${bookId}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${bookId}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => reloadBook(bookId))
     }
     const handleFlagAllRead = (bookId) => {
-        fetch(`http://localhost:3080/book/${bookId}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${bookId}/chapters/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 console.log(checkResponse)
                 reloadBook(bookId)
@@ -71,7 +72,7 @@ export default function BookListItem(props){
     
     const handleFlagRead = (bookId, chapterNumber) => {
         //console.log(bookId, chapterNumber)
-        fetch(`http://localhost:3080/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${bookId}/chapter/${chapterNumber}/flagRead`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(checkResponse => {
                 //console.log(checkResponse)
                 reloadBook(bookId)
