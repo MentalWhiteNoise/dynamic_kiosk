@@ -18,7 +18,11 @@ const helper = require('./genericHelper');
     return contents
 })();*/
 const getBrowser = (headless) => { 
-    return puppeteer.launch({headless: headless, executablePath: '/usr/bin/chromium-browser'});
+    return puppeteer.launch({
+        headless: headless, 
+        executablePath: '/usr/bin/chromium-browser',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     //return puppeteer.launch({headless: headless}); 
 }
 
