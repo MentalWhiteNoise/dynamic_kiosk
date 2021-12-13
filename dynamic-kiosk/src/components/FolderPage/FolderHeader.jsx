@@ -1,6 +1,7 @@
 import React, {} from "react";
 import { Avatar, IconButton, Paper, Typography, Select, MenuItem, InputLabel, FormControl, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
-import { Folder, Update, Edit, UpdateDisabled } from '@mui/icons-material';
+import { Folder, Update, UpdateDisabled } from '@mui/icons-material';
+import {isMobile} from 'react-device-detect';
 
 export default function FolderHeader(props){
     const { folder, bookList, siteList, onSiteChange, selectedSite, onUpdateClick, onCancelUpdate } = props;  
@@ -15,6 +16,28 @@ export default function FolderHeader(props){
     const handleClose = () => {
       setOpen(false);
     };
+    const RefreshButton = (props) =>{
+      const {running, bookCount} = props;
+      if (running === 0)      
+      return (
+        <Tooltip title={bookCount === 0 ? "" : "Check for updates"}>
+        <IconButton
+            disabled={bookCount === 0}
+            onClick={() => handleClickOpen()}
+        >
+            <Update />
+        </IconButton>
+        </Tooltip>)
+      return (
+        <Tooltip title={"Cancel Updates"}>
+        <IconButton
+            onClick={() => onCancelUpdate()}
+        >
+            <UpdateDisabled />
+        </IconButton>
+        </Tooltip>)
+  }
+
     return (<Paper>
         <table style={{width: "100%"}}>
             <tbody>
@@ -26,12 +49,17 @@ export default function FolderHeader(props){
                 </td>
                 <td style={{whiteSpace: "nowrap", padding: "0.5em"}}>
                 <Typography variant="h5">{folder}</Typography>
-                <Typography sx={{ fontSize: 14 }} color="text.secondary">(Lookup data last loaded)</Typography>
+                {/*<Typography sx={{ fontSize: 14 }} color="text.secondary">(Lookup data last loaded)</Typography>*/}
                 </td>
-                <td style={{width: "100%", padding: "0.5em"}}>
+                <td style={{whiteSpace: "nowrap", /*width: "100%",*/ padding: "0.5em"}}>
                 <FormControl>
+                  { (isMobile) ? <RefreshButton
+                    running={running}
+                    bookCount={effectiveBookList.length}
+                  /> : <></> }
                 <InputLabel id="site-select-label">Site</InputLabel>
                 <Select
+                    size="small"
                     value={selectedSite || ""}
                     label="Site"
                     labelId="site-select-label"
@@ -46,30 +74,12 @@ export default function FolderHeader(props){
                 </Select>
                 </FormControl>
                 </td>
-                <td style={{whiteSpace: "nowrap", padding: "0.5em"}}>
-                { (running === 0) ? (
-                    <Tooltip title={effectiveBookList.length === 0 ? "" : "Check for updates"}>
-                    <IconButton
-                        disabled={effectiveBookList.length === 0}
-                        onClick={() => handleClickOpen()}
-                    >
-                        <Update />
-                    </IconButton>
-                    </Tooltip>) : (
-                    <Tooltip title={"Cancel Updates"}>
-                    <IconButton
-                        onClick={() => onCancelUpdate()}
-                    >
-                        <UpdateDisabled />
-                    </IconButton>
-                    </Tooltip>)
-                }
-                <Tooltip title="Rename Folder">
-                <IconButton>
-                    <Edit />
-                </IconButton>
-                </Tooltip>
-                </td>
+                { (isMobile) ? <></> :  <td style={{whiteSpace: "nowrap", width: "100%", padding: "0.5em"}}>
+                  <RefreshButton
+                    running={running}
+                    bookCount={effectiveBookList.length}
+                  />
+                </td>}
             </tr>
             </tbody>
         </table>

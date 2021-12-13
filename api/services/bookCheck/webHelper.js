@@ -18,17 +18,27 @@ const helper = require('./genericHelper');
     return contents
 })();*/
 const getBrowser = (headless) => { 
+    if (headless === false){
+        return puppeteer.launch({
+            executablePath: '/usr/bin/chromium-browser',
+        });
+    }
+    /*
     return puppeteer.launch({
-        headless: headless, 
+        headless: headless/ *, 
         executablePath: '/usr/bin/chromium-browser',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+        args: ['--no-sandbox', '--disable-setuid-sandbox']* /
+    });*/
     //return puppeteer.launch({headless: headless}); 
 }
 
 const getUrlContents = async (browser, url, navigationMethods) =>{
     try {
         const page = await browser.newPage()
+
+        // this seems to fix the issue with some sites...
+        await page.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36");
+
         await page.setJavaScriptEnabled();
         await page.goto(url, { waitUntil: 'networkidle2' });
         //await sleep(500);

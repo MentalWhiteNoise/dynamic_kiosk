@@ -2,7 +2,7 @@
 import React, {useState, useEffect} from "react";
 import { Table, TableBody, TableCell, TableRow, CircularProgress } from "@mui/material";
 import ChapterListItem from './ChapterListItem'
-import ServerAddress from "../../services/api";
+import ServerAddress from "../../../services/api";
 
 const ChapterList = (props) => {    
     const [chapters, setChapters] = useState(null);

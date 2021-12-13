@@ -10,7 +10,7 @@ const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors())
-const port = 3080
+const port = 8080
 
 app.get('/sites', (req, res) => {
     const siteList = bookHelper.getSites()

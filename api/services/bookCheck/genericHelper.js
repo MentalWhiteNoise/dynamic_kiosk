@@ -21,5 +21,4 @@ function maxDate(items, prop){
   }, null);
   return rtrn ? rtrn.toISOString() : null
 };
-
 module.exports = { isNullOrWhiteSpace, replaceAll, sleep, sum, maxDate};

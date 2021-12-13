@@ -29,7 +29,18 @@ function getBookList(){
     return getReadingList();
 }
 function getFolders(){ 
-    return [...new Set(getReadingList().map(b => b.Folder))]
+    const readingList = getReadingList()
+    const folderList = [...new Set(readingList.map(b => {
+        return b.Folder;
+    }))];
+    let returnList = []
+    folderList.forEach(f =>{
+        const bookDates = readingList.filter(b=> b.Folder === f).map(b => {
+            return { LastSuccessful: helper.maxDate(b.Sites, "LastSuccessful")};
+        })
+        returnList.push({Folder: f, LastChecked: helper.maxDate(bookDates, "LastSuccessful")})
+    })
+    return returnList
 }
 async function removeBook(bookId){
     const bookList = getReadingList().filter(r => r.Id != bookId)
@@ -130,6 +141,7 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
     let rtrn = { hasChanged: false, item: book}
     let chapterUpdate = false;
     site.LastAttempted = new Date(Date.now());
+
     const parsedContent = await parseHelper.parseContents(browser, site.Url, false, getSiteConfig())
 
     if (parsedContent != null) {
@@ -202,6 +214,8 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
             })
             if (!exists){
                 console.log(`Adding to existing chapters...${c.chapterNumber}`)
+                // Testing the ability to log last uploaded...
+                rtrn.item.LastUploaded = helper.maxDate([{LastUploaded: c.dateUploaded}, {LastUploaded: rtrn.item.LastUploaded}], "LastUploaded")
                 existingChapters.push({
                     ChapterNumber: c.chapterNumber,
                     ChapterTitle: c.chapterTitle,

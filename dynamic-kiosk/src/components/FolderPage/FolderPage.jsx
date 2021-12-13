@@ -98,11 +98,16 @@ export default function FolderPage(props){
                 if (site == null || s.Url.match(site))
                 {
                     listToUpdate.push({ bookId: b.Id, siteId : s.SiteId })
-                    b.status = "queued"
+                    //b.status = "queued"
                 }
             })
         })
-        //console.log(tempList[95])
+        listToUpdate.forEach(b => {
+            //console.log(tempList.find(x => x.Id === b.bookId))
+            tempList.find(x => x.Id === b.bookId).status = "queued"
+            //console.log(tempList.find(x => x.Id === b.bookId))
+        })        
+        //console.log(tempList[42])
         setBookList(tempList)
         setUpdateList(listToUpdate)
         setCancelUpdate(false)
@@ -145,7 +150,7 @@ export default function FolderPage(props){
     const bookListUrls = ((bookList == null) ? [] : bookList.map(b => b.Sites.map(s => s.Url)).flat())
     const effectiveSiteList = siteList == null ? [] : siteList.filter(s => bookListUrls.filter(u => u.match(s)).length > 0)
     //console.log(effectiveSiteList);
-    return (<>    
+    return (<>
         <FolderHeader
             folder={folder}
             bookList={bookList}

@@ -7,18 +7,15 @@ const openInNewTab = (url) => {
     const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
     if (newWindow) newWindow.opener = null
 }
+const formatDate= (date) =>{
+  if (date == null) return null
+  return (new Date(date)).toISOString().substring(0,10)
+}
 export default function ChapterListItem(props){
     const {chapter, link, onFlagRead} = props;
     return (
         <TableRow>
             <TableCell>{chapter.ChapterNumber}</TableCell>
-            <TableCell>
-                <Button onClick={() => openInNewTab(link.HRef)}>
-                    <OpenInBrowser/>
-                    {chapter.ChapterTitle}
-                </Button>
-            </TableCell>
-            <TableCell>{link.DateUploaded ? new Date(link.DateUploaded).toLocaleDateString("en-uS") : ""}</TableCell>
             <TableCell>                
                 <Tooltip title="Flag Read">
                 <IconButton onClick={(e) => onFlagRead(chapter.ChapterNumber)}>
@@ -26,6 +23,13 @@ export default function ChapterListItem(props){
                 </IconButton>
                 </Tooltip>
             </TableCell>
+            <TableCell>
+                <Button onClick={() => openInNewTab(link.HRef)}>
+                    <OpenInBrowser/>
+                    {chapter.ChapterTitle}
+                </Button>
+            </TableCell>
+            <TableCell>{formatDate(link.DateUploaded)}</TableCell>
         </TableRow>
     )
 }
