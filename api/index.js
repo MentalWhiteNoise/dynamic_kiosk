@@ -82,6 +82,7 @@ app.post('/book/:bookId/checkForUpdates', async (req, res) => {
     const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
     try{
         await bookHelper.checkBook(browser, req.params.bookId);
+        res.sendStatus(200);
     }
     catch(ex){
         console.log(ex);
@@ -89,7 +90,6 @@ app.post('/book/:bookId/checkForUpdates', async (req, res) => {
     }
     finally{
         await browser.close();
-        res.sendStatus(200);
     }
 })
 app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => { 
@@ -97,6 +97,7 @@ app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => {
     const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
     try{
         await bookHelper.checkBookAtSite(browser, req.params.bookId, req.params.siteId);
+        res.sendStatus(200);
     }
     catch(ex){
         console.log(ex);
@@ -104,7 +105,6 @@ app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => {
     }
     finally{
         await browser.close();
-        res.sendStatus(200);
     }
     
     //res.send(`Checking for updates for book ${req.params.bookId}`)

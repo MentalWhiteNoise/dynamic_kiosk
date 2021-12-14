@@ -18,7 +18,8 @@ async function parseContents(browser, url, multiPage, sites)
         return null;
     }
     
-    const content = await webHelper.getUrlContents(browser, url, site.postLoad)    
+    const content = await webHelper.getUrlContents(browser, url, site.postLoad)
+    
     if (content == null) {
         console.log("Unable to pull content from web page...")
         return null;
@@ -44,9 +45,12 @@ async function parseContents(browser, url, multiPage, sites)
         console.log(`Error parsing chapters for ${url}`);
         return null;
     }
+    //console.log("Chapter Text length", chapterText.length);
+    //console.log("Chapter Text: ", chapterText.substring(0,500));
+    //console.log(helper.replaceAll(chapterText, site.splitChapterText, '?').substring(0,1000))
 
     const chaptersRaw = helper.replaceAll(chapterText, site.splitChapterText, String.fromCharCode(30)).split(String.fromCharCode(30));
-
+    //console.log(`${chaptersRaw.length} chapter sections`)
     let chapterList = [];
     chaptersRaw.forEach(chapter => {
         const tempChapter = parseRow(site.forEachChapterText, chapter);
@@ -61,7 +65,7 @@ async function parseContents(browser, url, multiPage, sites)
         }
         catch { }
     }
-
+    console.log(`${chapterList.length} chapters parsed`)
     rtrn = {...rtrn, chapterList: chapterList};
     return rtrn;
 }
@@ -123,11 +127,24 @@ function parseText (methods, text) {
             switch (parseMethod.method) {
                 case "readPast":
                     searchString = parseMethod.string;
-                    rtrn = rtrn.substring(rtrn.indexOf(searchString) + searchString.length);
+                    const stringFound = rtrn.indexOf(searchString);
+                    if (stringFound === 0 || stringFound === null)
+                    {
+                        console.log(`Cannot find string ${searchString}`)
+                        throw `Cannot find string ${searchString}`
+                    }
+                    rtrn = rtrn.substring(stringFound + searchString.length);
+                    //rtrn = rtrn.substring(rtrn.indexOf(searchString) + searchString.length);
                     break;
                 case "readUntil":
                     searchString = parseMethod.string;
-                    rtrn = rtrn.substring(0, rtrn.indexOf(searchString));
+                    const stringFound2 = rtrn.indexOf(searchString);
+                    if (stringFound2 === 0 || stringFound2 === null)
+                    {
+                        console.log(`Cannot find string ${searchString}`)
+                        throw `Cannot find string ${searchString}`
+                    }
+                    rtrn = rtrn.substring(0, stringFound2);
                     break;
                 case "trim":
                     rtrn = rtrn.trim();

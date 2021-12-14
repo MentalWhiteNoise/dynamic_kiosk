@@ -93,7 +93,7 @@ async function checkBook(browser, bookId){
     }
     else if (updatedBook.hasChanged)
     {
-        const bookList = updateBook(getReadingList(), bookId, updatedBook)
+        const bookList = updateBook(getReadingList(), bookId, updatedBook.item)
         saveBookList(bookList);
     }
 }
