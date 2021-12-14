@@ -166,7 +166,7 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
             }
         }
 
-        if (site.Image != parsedContent.image && !genericHelper.isNullOrWhiteSpace(parsedContent.image)) {
+        if (site.Image != parsedContent.image && !helper.isNullOrWhiteSpace(parsedContent.image)) {
             site.Image = parsedContent.image;
         }
 
