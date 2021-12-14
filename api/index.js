@@ -25,6 +25,7 @@ app.get('/folders', (req, res) => {
     res.json(folderList)
 })
 app.get('/folder/:folderName/books', (req, res) => {
+console.log(req.params.folderName)
     const bookList = bookHelper.getBookList()
     const filteredList = bookList.filter(x => x.Folder.toLowerCase() == req.params.folderName.toLowerCase())
     const mergedList = bookHelper.mergeListBookStatus(filteredList)
