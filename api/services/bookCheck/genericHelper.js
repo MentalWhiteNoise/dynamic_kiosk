@@ -17,15 +17,28 @@ function sum(items, prop){
 
 function maxDate(items, prop){
   const rtrn = items.reduce( function(a, b){
-      if (a == undefined)
-        return new Date(b[prop])
-        
-      if (b[prop] == undefined)
-        return a
-
-      return (a == null || a == undefined) ? (b[prop] == null || b[prop] == undefined) ? null : new Date(b[prop]) : a > new Date(b[prop]) ? a : new Date(b[prop]);
+      try{
+        if (a == undefined || a == null)
+        {
+          if (b[prop] == undefined || b[prop] == null)
+          { return null }
+          return new Date(b[prop])
+        }
+          
+        if (b[prop] == undefined || b[prop] == null)
+        { return a }
+  
+        return a > new Date(b[prop]) ? a : new Date(b[prop]);
+      }
+      catch {
+        return null
+      }
   }, null);
-  //console.log(rtrn);
-  return rtrn ? rtrn.toISOString() : null
+  try{
+    return rtrn ? rtrn.toISOString() : null
+  }
+  catch {
+    return null;
+  }
 };
 module.exports = { isNullOrWhiteSpace, replaceAll, sleep, sum, maxDate};
