@@ -2,19 +2,23 @@ const fs = require('fs');
 const parseHelper = require('./parseHelper');
 const helper = require('./genericHelper');
 
+const dataFolder = __dirname.replace("/services/bookCheck", "") + "/data/bookCheck"
 function getReadingList()
 {
-    const storeFile = './data/bookCheck/readingList.json'
+    const storeFile = `${dataFolder}/readingList.json`
     if (fs.existsSync(storeFile))
     {
         const items = fs.readFileSync(storeFile);
         return JSON.parse(items);
     }
+    else {
+	console.log("file not found", storeFile)
+    }
     return []
 }
 function getSiteConfig()
 {
-    const configFile = './data/bookCheck/siteConfig.json'
+    const configFile = `${dataFolder}/siteConfig.json`
     if (fs.existsSync(configFile))
     {
         const items = fs.readFileSync(configFile);
@@ -48,7 +52,7 @@ async function removeBook(bookId){
 
 }
 function getChapters(bookId){
-    const chapterFile = `./data/bookCheck/Chapters_${bookId}.json`
+    const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
     if (fs.existsSync(chapterFile))
     {
         const items = fs.readFileSync(chapterFile);
@@ -71,13 +75,13 @@ function updateBook(bookList, bookId, book)
 }
 async function saveBookList(bookList){
     let data = JSON.stringify(bookList, null, 2);
-    fs.writeFile("./data/bookCheck/readingList.json", data, (err) =>{
+    fs.writeFile(`${dataFolder}/readingList.json`, data, (err) =>{
         if (err) throw err;
         console.log("Reading list updated")
     })
 }
 async function saveChapters(bookId, chapterList){
-    const chapterFile = `./data/bookCheck/Chapters_${bookId}.json`
+    const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
     let data = JSON.stringify(chapterList, null, 2);
     fs.writeFile(chapterFile, data, (err) =>{
         if (err) throw err;
@@ -172,7 +176,7 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
 
         if (existingChapters === null)
             existingChapters = []
-        
+
         parsedContent.chapterList.forEach(c => {
             let exists = false;
             existingChapters.some(e => {
@@ -195,7 +199,7 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
                                 l.ChapterTitle = c.chapterTitle
                                 chapterUpdate = true;
                             }
-                        }                        
+                        }
                     })
                     if (!linkFound) {
                         e.Links.push ({
@@ -294,7 +298,7 @@ function mergeBookStatus(book){
         let siteChapterLinks = []
         //console.log(b.Id)
         chapterList.forEach(c => {
-            c.Links.forEach(l => {                
+            c.Links.forEach(l => {
                 // where site Ids match
                 if (l.SiteId === s.SiteId) {
                     siteChapterLinks.push({ChapterNumber: c.ChapterNumber, ChapterTitle: c.ChapterTitle, Read: c.Read, ...l});
@@ -302,13 +306,13 @@ function mergeBookStatus(book){
                 // where site Urls match
                 else if (l.SiteId == "00000000-0000-0000-0000-000000000000" && l.HRef.match(s.Url)) {
                     siteChapterLinks.push({ChapterNumber: c.ChapterNumber, ChapterTitle: c.ChapterTitle, Read: c.Read, ...l});
-                }                    
+                }
             })
         })
         const lateReadSiteChapter = siteChapterLinks.filter(sc => sc.Read)
             .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : a.DateUploaded > b.DateUploaded ? -1 : a.DateUploaded < b.DateUploaded ? 1 : 0)[0]
-        
-        lastReadChapter = (lastReadChapter) ? 
+
+        lastReadChapter = (lastReadChapter) ?
             (lastReadChapter.ChapterNumber < lateReadSiteChapter.ChapterNumber) ?
             lateReadSiteChapter :
             (lastReadChapter.ChapterNumber > lateReadSiteChapter.ChapterNumber) ?
@@ -317,10 +321,10 @@ function mergeBookStatus(book){
             lateReadSiteChapter : lastReadChapter
             : lateReadSiteChapter
 
-        let tempSite = {...s, 
-            CountRead: siteChapterLinks.filter(sc => sc.Read).length, 
-            CountUnread: siteChapterLinks.filter(sc => sc.Read === false).length, 
-            LastPosted: helper.maxDate(siteChapterLinks, 'DateUploaded'), 
+        let tempSite = {...s,
+            CountRead: siteChapterLinks.filter(sc => sc.Read).length,
+            CountUnread: siteChapterLinks.filter(sc => sc.Read === false).length,
+            LastPosted: helper.maxDate(siteChapterLinks, 'DateUploaded'),
             LastChapterRead: lateReadSiteChapter
         }
         tempSite = {...tempSite, Status: getStatusCategory(tempSite)}
@@ -349,7 +353,7 @@ function getStatusCategory(bookSite)
 
     if (bookSite.LastAttempted == null)
         return "never checked"
-        
+
     if (new Date(bookSite.LastSuccessful) < new Date(bookSite.LastAttempted))
         return "check failed"
 
@@ -361,13 +365,13 @@ function getStatusCategory(bookSite)
 
     if (lastCheckedDays > 30)
         return "no recent check"
-        
+
     if (bookSite.CountUnread > 0)
         return "more to read"
 
     if (bookSite.CountRead > 0)
         return "up to date"
-    
+
     return "unknown"
 }
 // Action Item: Add status to book items
