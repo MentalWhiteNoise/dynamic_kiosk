@@ -40,7 +40,11 @@ export default function UnreadFilter(props){
                 label="Unread"
             />
             <Tooltip title={tempFilter.value === "" ? "" : "Apply Filter"}>
-            <IconButton disabled={tempFilter.value === ""} onClick={() => {onFilterClose("unread", tempFilter)}}>
+            <IconButton disabled={tempFilter.value === ""} onClick={() => {
+                const dir = tempFilter.mode === "lt" ? "<" : ">"
+                const filterText = tempFilter.value == null ? null : dir + tempFilter.value
+                onFilterClose("unread", filterText)
+            }}>
                 <AddCircle/>
             </IconButton>
             </Tooltip>
@@ -49,7 +53,7 @@ export default function UnreadFilter(props){
                 disabled={tempFilter.value === ""} 
                 onClick={() => {
                     setTempFilter({value: "", mode: "gt"}); 
-                    onFilterClear("unread", { value: null, mode: "gt" })
+                    onFilterClear("unread", null)
                 }}
             >
                 <FilterAltOff/>

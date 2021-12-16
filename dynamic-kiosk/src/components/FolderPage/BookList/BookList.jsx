@@ -6,19 +6,37 @@ import UnreadFilter from "./UnreadFilter";
 import TitleFilter from "./TitleFilter";
 import StatusFilter from "./StatusFilter"
 import {BrowserView, MobileView} from 'react-device-detect';
+import  { useLocation, useSearchParams } from "react-router-dom";
 
 export default function BookList(props){
     let { bookList, selectedSite, onReloadBook, siteList } = props;
+    let [searchParams, setSearchParams] = useSearchParams();
+    const setSearchFilter = (property, filterText) => {
+        
+        const paramObject = Object.fromEntries([...searchParams])
+        console.log(paramObject)
+        if (filterText == null){
+            delete paramObject[property]
+            setSearchParams({...paramObject})
+        }
+        else
+            setSearchParams({...paramObject, [property]: filterText})
+    }
+    const titleFilter = searchParams.get("title");
+    const statusFilter = searchParams.get("status");
+    const unreadFilter = searchParams.get("unread") === null ? null : searchParams.get("unread").substring(1);
+    const unreadFilterMode = searchParams.get("unread") === null ? "gt": searchParams.get("unread")[0] === "<" ? "lt" : "gt";
+
     //console.log(bookList[0])
     const [expanded, setExpanded] = useState(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [sortColumn, setSortColumn] = useState("title");
     const [sortDesc, setSortDesc] = useState("false");
-    const [filter, setFilter] = useState({ 
-        status: { openElement: null, filter: null }, 
-        title: { openElement: null, filter: null }, 
-        unread: { openElement: null, filter: { value: null, mode: "gt"}}
+    const [openElement, setOpenElement] = useState({ 
+        status: null,
+        title: null, 
+        unread: null,
     })
     const handleExpand = (index) => {
         //console.log("here", index)
@@ -40,36 +58,30 @@ export default function BookList(props){
         }
     }
     const onFilterClose = (item, value) =>{
-        let newFilter = {...filter}
-        newFilter[item] = {...filter[item], openElement: null}
-        if (value != null)
-            newFilter[item].filter = value
-        setFilter(newFilter)
+        setSearchFilter(item, value) 
+        setOpenElement({...openElement, [item]: null})
     }
     const onFilterClear = (item, dflt) =>{
-        let newFilter = {...filter}
-        newFilter[item] = {...filter[item], filter: dflt, openElement: null}
-        setFilter(newFilter)
+        setSearchFilter(item, null) 
+        setOpenElement({...openElement, [item]: null})
     }
     const onFilterOpen = (item, element) => {
-        let newFilter = {...filter}
-        newFilter[item] = {...filter[item], openElement: element}
-        setFilter(newFilter)
+        setOpenElement({...openElement, [item]: element})
     }
     
-    const filterAmount = (filter.unread.filter.value === null || filter.unread.filter.value === "") ? null : parseInt(filter.unread.filter.value);
+    const filterAmount = unreadFilter === null ? null : parseInt(unreadFilter);
     //console.log(filterAmount)
     //console.log(filter.unread.filter.mode)
     const filteredItems = bookList.filter(b => {
-        if (filter.status.filter !== null && b.Status !== filter.status.filter)
+        if (statusFilter !== null && b.Status !== statusFilter)
             return false;
 
-        if (filter.title.filter !== null && !b.Title.toLowerCase().match(filter.title.filter.toLowerCase()))
+        if (titleFilter !== null && !b.Title.toLowerCase().match(titleFilter.toLowerCase()))
             return false;
         if (filterAmount !== null && (
                 b.CountUnread == null
-                || (b.CountUnread <= filterAmount && filter.unread.filter.mode === "gt")
-                || (b.CountUnread >= filterAmount && filter.unread.filter.mode === "lt")
+                || (b.CountUnread <= filterAmount && unreadFilterMode === "gt")
+                || (b.CountUnread >= filterAmount && unreadFilterMode === "lt")
             ))
             return false;
 
@@ -108,8 +120,8 @@ export default function BookList(props){
     const unreadHeader = <>
         <Button onClick={()=>handleSort("unread")}>Unread{ sortColumn === "unread" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
         <UnreadFilter
-            filter={filter.unread.filter}
-            openElement={filter.unread.openElement}
+            filter={{value: unreadFilter, mode: unreadFilterMode}}
+            openElement={openElement.unread}
             onFilterOpen={onFilterOpen}
             onFilterClose={onFilterClose}
             onFilterClear={onFilterClear}
@@ -118,8 +130,8 @@ export default function BookList(props){
     const statusHeader = <>
         <Button onClick={()=>handleSort("status")}>Status{ sortColumn === "status" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
         <StatusFilter
-            filter={filter.status.filter}
-            openElement={filter.status.openElement}
+            filter={statusFilter}
+            openElement={openElement.status}
             onFilterOpen={onFilterOpen}
             onFilterClose={onFilterClose}
             onFilterClear={onFilterClear}
@@ -129,8 +141,8 @@ export default function BookList(props){
     const titleHeader = <>
         <Button onClick={()=>handleSort("title")}>Book Title{ sortColumn === "title" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
         <TitleFilter
-            filter={filter.title.filter}
-            openElement={filter.title.openElement}
+            filter={titleFilter}
+            openElement={openElement.title}
             onFilterOpen={onFilterOpen}
             onFilterClose={onFilterClose}
             onFilterClear={onFilterClear}

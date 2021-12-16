@@ -1,11 +1,27 @@
-import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
+import React, {useEffect, useState } from "react";
+import {useParams } from "react-router-dom";
 import BookList from './BookList'
 import FolderHeader from './FolderHeader'
 import ServerAddress from "../../services/api";
+import  { useSearchParams } from "react-router-dom";
+
 
 export default function FolderPage(props){
     let { folder } = useParams();
+    //let query = useQuery();
+    //console.log(query.get("site"));
+    let [searchParams, setSearchParams] = useSearchParams();
+    const setSite = (newSite) => {
+        console.log(searchParams)
+        if (newSite == null){
+            delete searchParams.site
+            setSearchParams({...searchParams})
+        }
+        else
+            setSearchParams({...searchParams, site: newSite})
+    }
+    const site = searchParams.get("site");
+    
     const [bookList, setBookList] = useState(null);
     const [bookListLoading, setBookListLoading] = useState(true);
     const [bookListError, setBookListError] = useState(null);
@@ -14,7 +30,7 @@ export default function FolderPage(props){
     const [siteListLoading, setSiteListLoading] = useState(true);
 
     const [siteListError, setSiteListError] = useState(null);
-    const [site, setSite] = useState(null);
+    //const [site, setSite] = useState(null);
     const [updateList, setUpdateList] = useState([]);
     const [cancelUpdate, setCancelUpdate] = useState(false);
 

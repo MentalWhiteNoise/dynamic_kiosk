@@ -1,36 +1,24 @@
 const puppeteer = require('puppeteer');
 const helper = require('./genericHelper');
-  
-//const browser = await puppeteer.launch({executablePath: '/usr/bin/chromium-browser'});
-/*const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: '/usr/bin/chromium-browser',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-});*/
-/*
-(async () => {
-    const browser = await puppeteer.launch({headless: false});
-    const contents = await getUrlContents(browser, 'file:///C:/Personal%20-%20STAY%20THE%20F%20OUT/Book%20Check/new/unread_Favorites.html', null);
-    //const page = await browser.newPage();
-    //await page.goto('https://www.geeksforgeeks.org/');
-    //console.log(contents);
-    await browser.close();
-    return contents
-})();*/
+
+var isWin = process.platform === "win32";
+//console.log(process.platform)
+
 const getBrowser = (headless) => { 
-    return puppeteer.launch({
-        //headless: false,
-        setJavaScriptEnabled: true,
-        slowMo: 250, 
-        executablePath: '/usr/bin/chromium-browser'
-    });
-    /*
-    return puppeteer.launch({
-        headless: headless/ *, 
-        executablePath: '/usr/bin/chromium-browser',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']* /
-    });*/
-    //return puppeteer.launch({headless: headless}); 
+    if (isWin)
+        return puppeteer.launch({
+            //headless: false,
+            setJavaScriptEnabled: true,
+            //slowMo: 250, 
+            //executablePath: '/usr/bin/chromium-browser'
+        });
+    else 
+        return puppeteer.launch({
+            //headless: false,
+            setJavaScriptEnabled: true,
+            //slowMo: 250, 
+            executablePath: '/usr/bin/chromium-browser'
+        });
 }
 
 const getUrlContents = async (browser, url, navigationMethods) =>{

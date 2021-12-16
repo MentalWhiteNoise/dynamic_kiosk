@@ -2,7 +2,7 @@ const fs = require('fs');
 const parseHelper = require('./parseHelper');
 const helper = require('./genericHelper');
 
-const dataFolder = __dirname.replace("/services/bookCheck", "") + "/data/bookCheck"
+const dataFolder = helper.replaceAll(__dirname, '\\', '/').replace("/services/bookCheck", "") + "/data/bookCheck"
 function getReadingList()
 {
     const storeFile = `${dataFolder}/readingList.json`
