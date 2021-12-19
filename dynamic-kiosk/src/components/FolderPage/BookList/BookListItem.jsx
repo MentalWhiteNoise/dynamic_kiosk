@@ -12,14 +12,15 @@ function openInNewTab(url){
     if (newWindow) newWindow.opener = null
 }
 export default function BookListItem(props){
-    const {onExpand, expanded, selectedSite, onReloadBook, siteList} = props;
+    const {onExpand, expanded, selectedSite, onReloadBook, siteList, loading} = props;
+
     const [book, setBook] = useState(props.book);
     //console.log(book.Id)
     const [checkingTriggered, setCheckingTriggered] = useState(book.status === "checking");
     useEffect(() => { reloadBook(book.Id) }, [book.Id])
     useEffect(() => { 
-        setCheckingTriggered(book.status === "queued" || book.status === "checking") 
-    }, [book.status])
+        setCheckingTriggered(loading != null && loading.length > 0)
+    }, [loading])
     useEffect(() => {setBook(props.book)}, [props.book])
 
 
@@ -83,16 +84,17 @@ export default function BookListItem(props){
     if (isMobile)
         return <>
         <TableRow>
-        <TableCell rowSpan={2 + matchedSites.length * 3} padding="none"><img
-            src={book.Sites[0].Image}
-            loading="lazy"
-            alt=""
-            style={{
-                maxWidth: "100px",
-                maxHeight: "100px",
-                width: "auto",
-                height: "auto"
-            }}
+        <TableCell rowSpan={2 + matchedSites.length * 3} padding="none">
+            <img
+                src={book.Sites[0].Image}
+                loading="lazy"
+                alt=""
+                style={{
+                    maxWidth: "100px",
+                    maxHeight: "100px",
+                    width: "auto",
+                    height: "auto"
+                }}
             />
         </TableCell>
         <TableCell colSpan={2} sx={{width: "100%"}}>

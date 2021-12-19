@@ -1,10 +1,10 @@
 import './App.css';
-import FolderList from './components/FolderList/FolderList'
-import FolderPage from './components/FolderPage/FolderPage'
+import FolderList from './components/FolderList'
+import FolderPage from './components/FolderPage'
 import BookPage from './components/BookPage'
 import BookSearch from './components/BookSearch';
 import AddBook from './components/AddBook';
-import SiteConfig from './components/SiteConfig/SiteConfig';
+import SiteConfig from './components/SiteConfig';
 import {
   BrowserRouter as Router,
   Routes,

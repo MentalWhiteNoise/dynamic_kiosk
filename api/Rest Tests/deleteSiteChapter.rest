@@ -1,0 +1,1 @@
+DELETE http://pf1lqyyh:8080/book/5/site/00000000-0000-0000-0000-000000000000/chapter/161 HTTP/1.1

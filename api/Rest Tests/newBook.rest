@@ -1,10 +1,7 @@
-PUT http://localhost:3000/books HTTP/1.1
+PUT http://localhost:8080/books HTTP/1.1
 Content-Type: application/json
 
 {
-    "Title": "Mushoku Tensei - Isekai Ittara Honki Dasu",
-    "Url": "https://manganelo.com/manga/mushoku_tensei_isekai_ittara_honki_dasu",
-    "Image": "https://avt.mkklcdnv6temp.com/7/r/1-1583463967.jpg",
-    "Folder": "Favorites"
+    "Url": "https://readmanganato.com/manga-ae977439"
 }
 ###

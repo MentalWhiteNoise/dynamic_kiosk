@@ -1,15 +1,11 @@
 
 import { Delete, CheckBoxOutlineBlank, CheckBox, OpenInBrowser, Bookmark, BookmarkBorder, DeleteOutline } from "@mui/icons-material";
-import { CircularProgress, Table, TableBody, TableCell, TableRow, IconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from "@mui/material";
+import { CircularProgress, Table, TableBody, TableCell, TableRow, IconButton, Tooltip, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, TablePagination } from "@mui/material";
 import { Box } from "@mui/system";
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import ServerAddress from "../../services/api";
+import { openInNewTab } from "../../helpers/sharedFunctions";
 
-const openInNewTab = (url) => {
-    //console.log("here:", url)
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-    if (newWindow) newWindow.opener = null
-}
 export default function ChapterList(props){
     let { book, reloadBook, onFlagRead, onFlagUnread } = props;
     const [enableDelete, setEnableDelete] = useState(false);
@@ -18,9 +14,12 @@ export default function ChapterList(props){
     const [chaptersError, setChaptersError] = useState(null);
     const [linkConfirmOpen, setLinkConfirmOpen] = useState(false);
     const [selectedLink, setSelectedLink] = useState(null);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     
-    useEffect(() => {
-        fetch(`${ServerAddress}/book/${book.Id}/chapters`)
+
+    const loadChapters = useCallback(() => {
+        fetch(`${ServerAddress}/book/${book.Id}/chapters?` + new URLSearchParams({page: page, pageSize: pageSize}))
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -37,7 +36,8 @@ export default function ChapterList(props){
             .finally(() => {
                 setChaptersLoading(false);
             })
-    }, [book])
+    }, [book, page, pageSize])
+    useEffect(() => {loadChapters()}, [loadChapters, book, page, pageSize])
     
     const handleFlagAllUnread = () => {
         fetch(`${ServerAddress}/book/${book.Id}/chapters/flagUnread`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
@@ -56,10 +56,18 @@ export default function ChapterList(props){
         setLinkConfirmOpen(true)
     }
     const onDeleteSiteChapter = (siteId, chapterNumber) =>{
-        
+        fetch(`${ServerAddress}/book/${book.Id}/site/${siteId}/chapter/${chapterNumber}`, {method: 'DELETE' })
+            .then(checkResponse => {
+                console.log(checkResponse)
+                loadChapters();
+            })
     }
     const onDeleteAllChaptersForSite = (siteId) =>{
-        
+        fetch(`${ServerAddress}/book/${book.Id}/site/${siteId}/chapters`, {method: 'DELETE' })
+            .then(checkResponse => {
+                console.log(checkResponse)
+                loadChapters();
+            })
     }
     if (chaptersLoading) 
         return <CircularProgress/>
@@ -143,6 +151,15 @@ export default function ChapterList(props){
                     
                 </TableBody>
             </Table>
+            <TablePagination
+                rowsPerPageOptions={[10, 25, 100]}
+                component="div"
+                count={chapterData.chapterCount}
+                rowsPerPage={pageSize}
+                page={page-1}
+                onPageChange={(e,v) => setPage(v+1)}
+                onRowsPerPageChange={(e) => setPageSize(e.target.value+0)}
+            />
             <Dialog
                 open={linkConfirmOpen}
                 onClose={onCloseLinkConfirm}

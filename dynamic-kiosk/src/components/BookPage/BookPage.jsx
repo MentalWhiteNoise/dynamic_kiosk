@@ -1,26 +1,56 @@
-
-import { Add, Cancel, ContentCopy, Delete, Edit, PushPin, Save, Update } from "@mui/icons-material";
+import React, {useEffect, useState, useCallback} from "react";
+import { Link, useParams } from "react-router-dom";
+import { Add, Cancel, ContentCopy, Delete, Web, PushPin, Save, Update, DriveFolderUpload } from "@mui/icons-material";
 import { CircularProgress, Stack, Table, TableBody, TableCell, TableRow, TextField, Paper, InputLabel, Autocomplete, IconButton, Container, Tooltip, Button, Typography } from "@mui/material";
 import { Box } from "@mui/system";
-import React, {useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
 import SiteStatus from "../SiteStatus";
 import ChapterList from "./ChapterList"
 import ServerAddress from "../../services/api";
+import AddSiteDialog from './AddSiteDialog'
+import ConfirmationDialog from "../ConfirmationDialog";
+import { openInNewTab } from "../../helpers/sharedFunctions";
+import Processing from "../Processing";
+
+// Fix book image, so it doesn't overflow (or eliminate it in lieu of site images, since that is current control anyways)
+// Add Last Posted
 
 export default function BookPage(props){
     let { bookId } = useParams();
     const [book, setBook] = useState(null);
     const [bookLoading, setBookLoading] = useState(true);
     const [bookError, setBookError] = useState(null);
-    const [chapterData, setChapterData] = useState(null);
-    const [chaptersLoading, setChaptersLoading] = useState(true);
-    const [chaptersError, setChaptersError] = useState(null);
     const [unsavedChanges, setUnsavedChanges] = useState(false);
     const [folderList, setFolderList] = useState([]);
-    useEffect(() => {loadBook()}, [bookId])
+    const [addSiteOpen, setAddSiteOpen] = React.useState(false);
+    const [confirmDelete, setConfirmDelete] = React.useState(false);
+    const [clickedSite, setClickedSite] = React.useState(null);
+    const [activity, setActivity] = React.useState("idle");
+
+    const loadBook = useCallback(() =>{
+        fetch(`${ServerAddress}/book/${bookId}`)
+            .then(response =>{
+                if (response.ok){
+                    return response.json();
+                }
+                throw response
+            })
+            .then(data => {
+                setBook(data)
+                setCheckingTriggered(data.Status === "checking")
+            })
+            .catch(error => {
+                console.error("Error fetching data: ", error)
+                setBookError(error);
+            })
+            .finally(() => {
+                setBookLoading(false);
+            })
+        setUnsavedChanges(false);
+    }, [bookId])
+
+    useEffect(() => {loadBook()}, [loadBook, bookId])
     useEffect(() => {
-        fetch('${ServerAddress}/folders')
+        fetch(`${ServerAddress}/folders`)
             .then(response =>{
                 if (response.ok){
                     return response.json();
@@ -41,46 +71,11 @@ export default function BookPage(props){
         setBook({...book})
         setUnsavedChanges(true)
     }
-    const loadBook = () =>{
-        fetch(`${ServerAddress}/book/${bookId}`)
-            .then(response =>{
-                if (response.ok){
-                    return response.json();
-                }
-                throw response
-            })
-            .then(data => {
-                setBook(data)
-                setCheckingTriggered(data.Status === "checking")
-            })
-            .catch(error => {
-                console.error("Error fetching data: ", error)
-                setBookError(error);
-            })
-            .finally(() => {
-                setBookLoading(false);
-            })
-        fetch(`${ServerAddress}/book/${bookId}/chapters`)
-            .then(response =>{
-                if (response.ok){
-                    return response.json();
-                }
-                throw response
-            })
-            .then(data => {
-                setChapterData(data)
-            })
-            .catch(error => {
-                console.error("Error fetching data: ", error)
-                setChaptersError(error);
-            })
-            .finally(() => {
-                setChaptersLoading(false);
-            })
-        setUnsavedChanges(false);
-    }
     const saveChanges = () => {
-        
+        fetch(`${ServerAddress}/book/${book.Id}`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(book) })
+            .then(() => {
+                loadBook(book.Id)
+            })
     }
     const cancelChanges = () => {
         loadBook();
@@ -104,7 +99,7 @@ export default function BookPage(props){
     }
     const handleCheckForUpdate = (bookId, siteId) =>{
         setCheckingTriggered(true);
-        fetch(`${ServerAddress}book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/book/${bookId}/site/${siteId}/checkForUpdates?headless=false`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(response =>{
                 if (response.ok){
                     return;
@@ -122,6 +117,28 @@ export default function BookPage(props){
                 setCheckingTriggered(false);
             })
     }
+    const handleDeleteSite = () => {
+        setActivity("Deleting Site");
+        setConfirmDelete(false);
+        //console.log("Delete site", clickedSite)
+        fetch(`${ServerAddress}/book/${bookId}/site/${clickedSite}`, {method: 'DELETE'})
+            .then(response =>{
+                if (response.ok){
+                    return
+                }
+                throw response
+            })
+            .then(() => {
+                loadBook();
+                setActivity("idle");
+            })
+            .catch(err => {
+                console.log(err)
+            })
+            .finally(() => {
+                setActivity("idle")
+            })
+    }
 
     
     if (bookLoading) 
@@ -134,7 +151,7 @@ export default function BookPage(props){
             <Table>
                 <TableBody>
                     <TableRow>
-                        <TableCell rowSpan={3}>
+                        <TableCell rowSpan={3} sx={{whiteSpace: "nowrap"}}>
                             <img
                             src={book.Sites[0].Image}
                             alt={book.Title}
@@ -144,7 +161,7 @@ export default function BookPage(props){
                                 maxHeight: "275px",
                                 width: "auto",
                                 height: "auto"
-                            }}/>
+                            }}/><br/>
                             <Tooltip title={unsavedChanges ? "Save Changes" : ""}>
                                 <Button disabled={!unsavedChanges} onClick={() => saveChanges()}>
                                     <Save/>Save
@@ -163,19 +180,27 @@ export default function BookPage(props){
                                 onChange={(e) => handlePropertyChange(e.target.value, "Title")}
                                 />
                         </TableCell>
-                        <TableCell>
-                            <Autocomplete
-                                freeSolo
-                                value={book.Folder}
-                                options={folderList}
-                                sx={{ width: 300 }}
-                                onChange={(e, v) => {
-                                    handlePropertyChange(v, "Folder")
-                                }}
-                                renderInput={(params) => (
-                                    <TextField {...params} label="Folder"/>
-                                )}
-                            />
+                        <TableCell sx={{whiteSpace: "nowrap"}}>
+                            <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
+                                <Box>
+                                    <Tooltip title={`Go to ${book.Folder}`}>
+                                    <IconButton component={Link} to={`/folder/${book.Folder}`}>
+                                        <DriveFolderUpload/>
+                                    </IconButton>
+                                    </Tooltip>
+                                </Box>
+                                <Autocomplete
+                                    freeSolo
+                                    value={book.Folder}
+                                    options={folderList.map(f => f.Folder)}
+                                    sx={{ width: 300 }}
+                                    onChange={(e, v) => handlePropertyChange(v, "Folder")}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Folder"
+                                            onChange={(e) => handlePropertyChange(e.target.value, "Folder")}/>
+                                    )}
+                                />
+                            </Box>
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -207,7 +232,7 @@ export default function BookPage(props){
                                 {book.Sites.map((site, i) => (
                                 <Paper key={i}>
                                 <Box  sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
-                                    <Box sx={{ width: "100px", height: "auto" }}>
+                                    <Box sx={{ width: "100px", height: "auto", minWidth: "100px", overflow: "hidden"}}>
                                         <img
                                         src={site.Image}
                                         alt={site.SiteId}
@@ -228,9 +253,11 @@ export default function BookPage(props){
                                     <Container sx={{ display: 'flex', flexDirection: 'column', whiteSpace: 'nowrap' }}>
                                         <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
                                             <Box style={{display: 'table'}}>
-                                            <IconButton>
+                                            <Tooltip title={book.Sites.length === 1 ? "" : "Delete site and all chapters"}>
+                                            <IconButton disabled={book.Sites.length === 1} onClick={() => {setConfirmDelete(true); setClickedSite(site.SiteId)}}>
                                                 <Delete/>
                                             </IconButton>
+                                            </Tooltip>
                                             </Box>
                                             <Box style={{display: 'table'}}>
                                                 <Typography variant="h5" sx={{ display: 'table-cell', verticalAlign: 'middle' }}>
@@ -239,9 +266,11 @@ export default function BookPage(props){
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
-                                            <IconButton>
-                                                <Edit/>
+                                            <Tooltip title= {`Navigate to chapter list: ${site.Url}`}>
+                                            <IconButton onClick={() => openInNewTab(site.Url)}>
+                                                <Web/>
                                             </IconButton>
+                                            </Tooltip>
                                             <Box style={{display: 'table'}}>
                                                 <Typography variant="subtitle1" sx={{ display: 'table-cell', verticalAlign: 'middle', color: "rgba(0, 0, 0, 0.6)" }} >
                                                     {site.Url}
@@ -279,9 +308,11 @@ export default function BookPage(props){
                                 </Paper>
                                 ))}
 
-                            <IconButton>
+                            <Tooltip title="Add new site for reading book">
+                            <IconButton onClick={() => {setAddSiteOpen(true)}}>
                                 <Add/>
                             </IconButton>
+                            </Tooltip>
                             </Paper>
                         </TableCell>
                     </TableRow>
@@ -297,6 +328,22 @@ export default function BookPage(props){
                     </TableRow>
                 </TableBody>
             </Table>
+            <AddSiteDialog
+                open={addSiteOpen}
+                onSiteAdded={loadBook}
+                bookId={book.Id}
+                onClose={() => {setAddSiteOpen(false)}}
+            />
+            <ConfirmationDialog
+                open={confirmDelete}
+                onConfirm={() => handleDeleteSite()}
+                onCancel={() => setConfirmDelete(false)}
+                title="Delete site and all chapters?"
+                message={"This site, any chapters from this site, and any read history from chapters only from this site will be delete. Are you sure you want to continue?"}
+            />
+            <Processing 
+                open={activity !== "idle"}
+            />
             </>
         )}
         </>)

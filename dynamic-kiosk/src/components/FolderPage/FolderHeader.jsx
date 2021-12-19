@@ -1,13 +1,13 @@
 import React, {} from "react";
-import { Avatar, IconButton, Paper, Typography, Select, MenuItem, InputLabel, FormControl, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from "@mui/material";
+import { Avatar, IconButton, Paper, Typography, Select, MenuItem, InputLabel, FormControl, Tooltip } from "@mui/material";
 import { Folder, Update, UpdateDisabled } from '@mui/icons-material';
 import {isMobile} from 'react-device-detect';
+import ConfirmationDialog from "../ConfirmationDialog";
 
 export default function FolderHeader(props){
-    const { folder, bookList, siteList, onSiteChange, selectedSite, onUpdateClick, onCancelUpdate } = props;  
+    const { folder, bookList, siteList, onSiteChange, selectedSite, onUpdateClick, onCancelUpdate, running } = props;  
     const [open, setOpen] = React.useState(false);
     const effectiveBookList = (bookList == null) ? [] : bookList.filter(x => selectedSite == null || x.Sites.filter(y=>y.Url.match(selectedSite)).length > 0)
-    const running = effectiveBookList.filter(x => x.status !== "idle").length
     
     const handleClickOpen = () => {
       setOpen(true);
@@ -83,26 +83,14 @@ export default function FolderHeader(props){
             </tr>
             </tbody>
         </table>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          {"Are you sure you want to process all these?"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            There are {effectiveBookList.length} books that will be updated. This may take a while. Are you sure you want to continue?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Never mind...</Button>
-          <Button onClick={() => { onUpdateClick(); handleClose()}} autoFocus>
-            Run it!
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <ConfirmationDialog
+          open={open}
+          onConfirm={() => { onUpdateClick(); handleClose()}}
+          onCancel={handleClose}
+          title="Are you sure you want to process all these?"
+          message={`There are ${effectiveBookList.length} books that will be updated. This may take a while. Are you sure you want to continue?`}
+          cancelText="Never mind..."
+          okText="Run it!"
+        />
     </Paper>)
 }

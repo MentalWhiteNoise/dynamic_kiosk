@@ -1,8 +1,13 @@
 const fs = require('fs');
 const parseHelper = require('./parseHelper');
 const helper = require('./genericHelper');
+const { error } = require('console');
+const uuid = require('uuid')
 
+// manipulation to work with windows or linux...
 const dataFolder = helper.replaceAll(__dirname, '\\', '/').replace("/services/bookCheck", "") + "/data/bookCheck"
+
+// File lookups
 function getReadingList()
 {
     const storeFile = `${dataFolder}/readingList.json`
@@ -26,31 +31,6 @@ function getSiteConfig()
     }
     return []
 }
-function getSites(){
-    return getSiteConfig().map(s => s.site);
-}
-function getBookList(){
-    return getReadingList();
-}
-function getFolders(){ 
-    const readingList = getReadingList()
-    const folderList = [...new Set(readingList.map(b => {
-        return b.Folder;
-    }))];
-    let returnList = []
-    folderList.forEach(f =>{
-        const bookDates = readingList.filter(b=> b.Folder === f).map(b => {
-            return { LastSuccessful: helper.maxDate(b.Sites, "LastSuccessful")};
-        })
-        returnList.push({Folder: f, LastChecked: helper.maxDate(bookDates, "LastSuccessful")})
-    })
-    return returnList
-}
-async function removeBook(bookId){
-    const bookList = getReadingList().filter(r => r.Id != bookId)
-    await saveBookList(bookList);
-
-}
 function getChapters(bookId){
     const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
     if (fs.existsSync(chapterFile))
@@ -60,22 +40,11 @@ function getChapters(bookId){
     }
     return [];
 }
-function getBookChapters(bookId, pageSize, page){
-    const chapters = getChapters(bookId)
-        .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : 0)
-    const pageNum = (page * pageSize > chapters.length) ? 0 : page - 1;
-    return { chapters: chapters.slice(pageNum * pageSize, (pageNum + 1) * pageSize), chapterCount: chapters.length };
-}
 
-function updateBook(bookList, bookId, book)
-{
-    let foundItem = bookList.findIndex(x => x.Id == parseInt(bookId))
-    bookList[foundItem] = book;
-    return bookList;
-}
+// File save operations
 async function saveBookList(bookList){
     let data = JSON.stringify(bookList, null, 2);
-    fs.writeFile(`${dataFolder}/readingList.json`, data, (err) =>{
+    await fs.writeFile(`${dataFolder}/readingList.json`, data, (err) =>{
         if (err) throw err;
         console.log("Reading list updated")
     })
@@ -83,11 +52,193 @@ async function saveBookList(bookList){
 async function saveChapters(bookId, chapterList){
     const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
     let data = JSON.stringify(chapterList, null, 2);
-    fs.writeFile(chapterFile, data, (err) =>{
+    await fs.writeFile(chapterFile, data, (err) =>{
         if (err) throw err;
         console.log("Chapter list updated")
     })
 }
+
+// Simple get methods
+function getSites(){
+    return getSiteConfig().map(s => s.site);
+}
+function getBookList(){
+    return getReadingList();
+}
+function getFolders(hidden){ 
+    const readingList = getReadingList()
+    const folderList = [...new Set(readingList.map(b => {
+        return b.Folder;
+    }))];
+    let returnList = []
+    folderList.forEach(f =>{
+        if (hidden || f.toLowerCase() !== "hidden"){
+            const bookDates = readingList.filter(b=> b.Folder === f).map(b => {
+                return { LastSuccessful: helper.maxDate(b.Sites, "LastSuccessful")};
+            })
+            returnList.push({Folder: f, LastChecked: helper.maxDate(bookDates, "LastSuccessful")})
+        }
+    })
+    return returnList
+}
+function getPagedChapters(bookId, pageSize, page){
+    const chapters = getChapters(bookId)
+        .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : 0)
+    const pageNum = (page * pageSize > chapters.length) ? 0 : page - 1;
+    return { chapters: chapters.slice(pageNum * pageSize, (pageNum + 1) * pageSize), chapterCount: chapters.length };
+}
+function getBook(bookId){
+    const bookList = getBookList()
+    const book = bookList.find(x => x.Id.toString() === bookId)
+    return mergeBookStatus(book)
+}
+function getBooksForFolder(folderName){
+    const bookList = getBookList()
+    const filteredList = bookList.filter(x => x.Folder.toLowerCase() == folderName.toLowerCase())
+    const mergedList = mergeListBookStatus(filteredList)
+    return mergedList
+}
+function searchBooks(searchString, searchUrl){
+    const bookList = getBookList();
+    const filteredList = bookList.filter(x => 
+        (x.Title.toLowerCase().match(searchString.toLowerCase()) || 
+        (x.AltTitles !== null && x.AltTitles.filter(y => y.toLowerCase().match(searchString.toLowerCase())).length > 0)) ||
+        (searchUrl && x.Sites.filter(s => s.toLowerCase().match(searchString.toLowerCase()).length > 0))
+    )
+    const mergedList = mergeListBookStatus(filteredList)
+    return mergedList
+}
+
+
+// Book CRUD operations
+async function removeBook(bookId){
+    const bookList = getReadingList().filter(r => r.Id != bookId)
+    await saveBookList(bookList);
+}
+function updateBook(bookList, bookId, book)
+{
+    let foundItem = bookList.findIndex(x => x.Id == parseInt(bookId))
+    bookList[foundItem] = book;
+    return [...bookList];
+}
+function saveBook(book)
+{
+    const bookList = getReadingList()
+    let cleanedBook = { // Get rid of unnecessary properties
+        Id: book.Id,
+        Title: book.Title,
+        Sites: book.Sites.map(s => {
+            let site = {
+                SiteId: s.SiteId,
+                Url: s.Url,
+                Image: s.Image
+            }
+            if (s.LastAttempted != null && s.LastAttempted != undefined)
+                site.LastAttempted = s.LastAttempted
+            if (s.LastUploaded != null && s.LastUploaded != undefined)
+                site.LastUploaded = s.LastUploaded
+            if (s.LastPosted != null && s.LastPosted != undefined)
+                site.LastPosted = s.LastPosted
+            return site
+        }),
+        AltTitles: [...book.AltTitles],
+        Folder: book.Folder
+    }
+    if (book.LastUploaded != null && book.LastUploaded != undefined)
+        cleanedBook.LastUploaded = book.LastUploaded
+    const newList = updateBook(bookList, cleanedBook.Id, cleanedBook)
+    saveBookList(newList)
+}
+
+
+// Chapter CRUD
+// Delete Chapter By Site Id
+function internalDeleteChaptersBySite(bookId, siteId, chapterNumber){
+    const chapterList = getChapters(bookId);
+    const newChapterList = [];
+    chapterList.forEach(c => {
+        if (c.ChapterNumber == chapterNumber || chapterNumber == null)
+        {
+            const newLinks = c.Links.filter(x => x.SiteId != siteId)
+            if (newLinks.length > 0) {
+                c.Links = [...newLinks];
+                newChapterList.push(c);
+            } 
+        }
+        else{
+            newChapterList.push(c);
+        }
+    })
+    saveChapters(bookId, newChapterList);
+
+}
+function deleteChapterBySite(bookId, siteId, chapterNumber){
+    internalDeleteChaptersBySite(bookId, siteId, chapterNumber)
+}
+function deleteSiteChapters(bookId, siteId){
+    internalDeleteChaptersBySite(bookId, siteId, null)
+}
+// Delete Site Id
+function deleteSite(bookId, siteId){
+    const bookList = getBookList()
+    const book = bookList.find(x => x.Id.toString() === bookId)
+    const siteIndex = book.Sites.findIndex(x => x.SiteId === siteId)
+    if (book.Sites.length < 1 && siteIndex != null){
+        console.log("A book needs to have at least one site. Add a replacement site first, or delete the book.")
+        throw "A book needs to have at least one site. Add a replacement site first, or delete the book."
+    }
+    const newChapterList = [...getChapters(bookId).filter(x => x.SiteId !== siteId)];
+    saveChapters(bookId, newChapterList);
+    book.Sites = [...book.Sites.filter(x => x.SiteId != siteId)]
+    const newBookList = updateBook(bookList, bookId, book)
+    saveBookList(newBookList)
+}
+async function addSite(browser, bookId, siteId, siteUrl){
+    const bookList = getBookList()
+    const book = bookList.find(x => x.Id.toString() === bookId)
+    const newSiteId = siteId == null ? uuid.v4() : siteId
+    book.Sites.push({
+        SiteId: newSiteId,
+        Url: siteUrl
+    })
+    await saveBookList(bookList)
+    await checkBookAtSite(browser, bookId, newSiteId)
+}
+async function addBook(browser, url, folder){
+    const bookList = getBookList()
+    const existing = bookList.filter(b => b.Sites.filter(s => s.Url.toLowerCase() === url.toLowerCase()).length > 0)
+    if (existing.length > 0)
+        throw "Already exists"
+    const newId = Math.max.apply(null, bookList.map(b => b.Id)) + 1
+    let parsedSite = null
+    try{
+        parsedSite = await testParseUrl(browser, url)
+    }
+    catch{
+        throw "Could not parse site"
+    }
+     
+    if (parsedSite == null)
+        throw "Could not parse site"
+    console.log(parsedSite)
+    const newBook = {
+        Id: newId,
+        Folder: folder,
+        AltTitles: [],
+        Sites: [
+            {
+                SiteId : parsedSite.SiteId,
+                Url: url
+            }
+        ]
+    }
+    bookList.push(newBook)
+    await saveBookList([...bookList])
+    await helper.sleep(500)
+    await checkBookAtSite(browser, newId, parsedSite.SiteId)
+    return newBook;
+}
+// Checking for new chapters
 async function checkBook(browser, bookId){
     const book = getReadingList().find(x => x.Id === parseInt(bookId));
     const updatedBook = await checkBook_internal(browser, book, null);
@@ -247,6 +398,45 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
     }
     return rtrn;
 }
+async function testParseUrl(browser, url)
+{
+    let site = {
+        SiteId: uuid.v4(),
+        Url: url,
+        LastAttempted: Date(Date.now()),
+        ChapterList: []
+    };
+    const parsedContent = await parseHelper.parseContents(browser, url, false, getSiteConfig())
+
+    if (parsedContent != null) {
+        site.LastSuccessful = new Date(Date.now());
+        site.Title = parsedContent.title
+        site.Image = parsedContent.image;
+
+        parsedContent.chapterList.forEach(c => {
+            site.LastUploaded = helper.maxDate([{LastUploaded: c.dateUploaded}, {LastUploaded: site.LastUploaded}], "LastUploaded")
+            site.ChapterList.push({
+                ChapterNumber: c.chapterNumber,
+                ChapterTitle: c.chapterTitle,
+                Read: false,
+                Links: [
+                    {
+                        SiteId: site.SiteId,
+                        ChapterTitle: c.chapterTitle,
+                        HRef: c.hRef,
+                        DateUploaded: c.dateUploaded
+                    }
+                ]
+            })
+        })
+    }
+    else {
+        console.log(`Could not parse ${url}`)
+        return null
+    }
+    return site;
+}
+// Chapter list CRUD
 async function flagAllRead(bookId){
     const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
     let existingChapters = getChapters(book.Id);
@@ -287,6 +477,8 @@ async function flagUnread(bookId, chapterNumber){
     })
     saveChapters(bookId, existingChapters)
 }
+
+// Helper methods
 function mergeListBookStatus(bookList){
     const newList = bookList.map(b => mergeBookStatus(b))
     return [...newList];
@@ -309,23 +501,26 @@ function mergeBookStatus(book){
                 }
             })
         })
-        const lateReadSiteChapter = siteChapterLinks.filter(sc => sc.Read)
+        
+        const lastReadSiteChapter = siteChapterLinks.filter(sc => sc.Read)
             .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : a.DateUploaded > b.DateUploaded ? -1 : a.DateUploaded < b.DateUploaded ? 1 : 0)[0]
 
-        lastReadChapter = (lastReadChapter) ?
-            (lastReadChapter.ChapterNumber < lateReadSiteChapter.ChapterNumber) ?
-            lateReadSiteChapter :
-            (lastReadChapter.ChapterNumber > lateReadSiteChapter.ChapterNumber) ?
-            lastReadChapter :
-            (lastReadChapter.DateUploaded < lateReadSiteChapter.DateUploaded) ?
-            lateReadSiteChapter : lastReadChapter
-            : lateReadSiteChapter
+        if (siteChapterLinks.length > 0){
+            lastReadChapter = (lastReadChapter) ?
+                (lastReadChapter.ChapterNumber < lastReadSiteChapter.ChapterNumber) ?
+                lastReadSiteChapter :
+                (lastReadChapter.ChapterNumber > lastReadSiteChapter.ChapterNumber) ?
+                lastReadChapter :
+                (lastReadChapter.DateUploaded < lastReadSiteChapter.DateUploaded) ?
+                lastReadSiteChapter : lastReadChapter
+                : lastReadSiteChapter
+        }
 
         let tempSite = {...s,
             CountRead: siteChapterLinks.filter(sc => sc.Read).length,
             CountUnread: siteChapterLinks.filter(sc => sc.Read === false).length,
             LastPosted: helper.maxDate(siteChapterLinks, 'DateUploaded'),
-            LastChapterRead: lateReadSiteChapter
+            LastChapterRead: lastReadSiteChapter
         }
         tempSite = {...tempSite, Status: getStatusCategory(tempSite)}
         return tempSite
@@ -374,8 +569,6 @@ function getStatusCategory(bookSite)
 
     return "unknown"
 }
-// Action Item: Add status to book items
-// Action Item: Add unread counts to book items
 
 /*
 (async () => {
@@ -400,4 +593,12 @@ function getStatusCategory(bookSite)
 })()*/
 
 
-module.exports = { getSites, getSiteConfig, getBookList, getFolders, getChapters, getBookChapters, removeBook, checkBook, checkBookAtSite, flagAllRead, flagAllUnread, flagRead, flagUnread, mergeBookStatus, mergeListBookStatus};
+module.exports = { getSites, getSiteConfig, 
+    getFolders, 
+    getBook,getBooksForFolder,searchBooks,
+    getChapters, getPagedChapters, 
+    addSite, 
+    saveBook, addBook, removeBook, 
+    deleteChapterBySite, deleteSite, deleteSiteChapters, 
+    checkBook, checkBookAtSite, testParseUrl,
+    flagAllRead, flagAllUnread, flagRead, flagUnread};

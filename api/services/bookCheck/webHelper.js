@@ -24,13 +24,20 @@ const getBrowser = (headless) => {
 const getUrlContents = async (browser, url, navigationMethods) =>{
     try {
         const page = await browser.newPage()
+
+        // Not sure why this seems to fix a puppeteer issue...
+        process.on('unhandledRejection', (reason, p) => {
+            console.error('Unhandled Rejection at: Promise', p, 'reason:', reason);
+            browser.close();
+          });
         // this seems to fix the issue with some sites...
         //await page.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36");
         await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36");
         //await page.setJavaScriptEnabled(true);
         console.log("Navigate To URL")
 
-        await page.goto(url);//, { waitUntil: 'networkidle2' }); // May not hit this if it uses javascript!
+        // not sure which, if any, waitUntil to use: domcontentloaded, networkidle2, networkidle0...
+        await page.goto(url, { waitUntil: 'domcontentloaded' });//, { waitUntil: 'networkidle2' }); // May not hit this if it uses javascript!
         console.log("Apply navigation...")
         try{
             await applyNavigation(navigationMethods, page);

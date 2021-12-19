@@ -25,16 +25,13 @@ app.get('/folders', (req, res) => {
     res.json(folderList)
 })
 app.get('/folder/:folderName/books', (req, res) => {
-console.log(req.params.folderName)
-    const bookList = bookHelper.getBookList()
-    const filteredList = bookList.filter(x => x.Folder.toLowerCase() == req.params.folderName.toLowerCase())
-    const mergedList = bookHelper.mergeListBookStatus(filteredList)
-    res.json(mergedList)
+
+    const bookList = bookHelper.getBooksForFolder(req.params.folderName)
+    res.json(bookList)
 })
 app.get('/book/:bookId', (req, res) => {
-    const bookList = bookHelper.getBookList()
-    const book = bookList.find(x => x.Id.toString() === req.params.bookId)
-    res.json(bookHelper.mergeBookStatus(book))
+    const book = bookHelper.getBook(req.params.bookId)
+    res.json(book)
 })
 app.get('/book/:bookId/chapters/unread', (req, res) => {
     const chapters = bookHelper.getChapters(req.params.bookId)
@@ -66,18 +63,14 @@ app.get('/book/:bookId/chapters/lastread', (req, res) => {
     }
 })
 app.get('/book/:bookId/chapters', (req, res) => {
-    console.log(req.query)
-    const chapters = bookHelper.getBookChapters(req.params.bookId, req.query.pageSize | 20, req.query.page | 1)
+
+    const chapters = bookHelper.getPagedChapters(req.params.bookId, parseInt(req.query.pageSize || 20), parseInt(req.query.page || 1))
     const totalPages = Math.floor(chapters.chapterCount / (req.query.pageSize | 20)) + 1
     chapters.pageCount = totalPages;
     if (totalPages > req.query.page | 1)
         chapters.next = `/book/${req.params.bookId}/chapters/${(req.query.page | 1) + 1}`
     res.json(chapters)
 })
-
-// Action Item: Add paging & sorting to book lists
-// Action Item: Add paging to chapter lists
-// Action Item: Queue up update check(?)
 
 app.post('/book/:bookId/checkForUpdates', async (req, res) => {    
     const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
@@ -112,43 +105,34 @@ app.post('/book/:bookId/site/:siteId/checkForUpdates', async (req, res) => {
 })
 
 app.get('/books/find', (req, res) => {
-    console.log(req.query)
-    if(req.query.title === undefined)
+    if(req.query.search === undefined)
     {
-        console.log("Please specify a title.")
-        res.status(500).send('Please specify a title search term')
+        console.log("Please specify a search query parameter.")
+        res.status(400).send('Please specify a search query parameter')
         return
     }
-    const bookList = bookHelper.getBookList();
-    const filteredList = bookList.filter(x => 
-        x.Title.toLowerCase().match(req.query.title.toLowerCase()) || (x.AltTitles !== null && x.AltTitles.filter(y => y.toLowerCase().match(req.query.title.toLowerCase())).length > 0)
-    )
-    res.json(filteredList)
-})
-app.get('/folder/:folderName/books/find', (req, res) => {
-    console.log(req.query)
-    if(req.query.title === undefined)
-    {
-        console.log("Please specify a title.")
-        res.status(500).send('Please specify a title search term')
-        return
-    }
-    const bookList = bookHelper.getBookList();
-    const filteredList = bookList.filter(x => x.Folder.toLowerCase() == req.params.folderName.toLowerCase() &&
-        (x.Title.toLowerCase().match(req.query.title.toLowerCase()) || (x.AltTitles !== null && x.AltTitles.filter(y => y.toLowerCase().match(req.query.title.toLowerCase())).length > 0))
-    )
-    res.json(filteredList)
+    const bookList = bookHelper.searchBooks(req.query.search, (req.query.includeUrl === true));
+    res.json(bookList)
 })
 
-app.put('/books', (req, res) => {
-    const {Title, Url, Image, Folder} = req.body;
+app.put('/books', async (req, res) => {
+    const {Url, Folder} = req.body;
     if (Url === null || Url === undefined)
     {
         console.log("Must specify a minimum of a URL.", req.body)
-        res.status(500).send('Must specify a minimum of a URL')
+        res.status(400).send({ message: 'Must specify a minimum of a URL'})
         return
     }
-    res.status(500).send('TO BE DEVELOPED!')
+    const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+    let newBook = null
+    try{
+        newBook = await bookHelper.addBook(browser, Url, Folder || "New")
+        res.json(newBook)
+    }
+    catch(ex){
+        console.log(ex)
+        res.status(500).send(ex)
+    }
 })
 
 app.delete('/book/:bookId', (req, res) => {
@@ -156,63 +140,77 @@ app.delete('/book/:bookId', (req, res) => {
     //res.send(`Delete book ${req.params.bookId}`)
 })
 app.post('/book/:bookId', (req, res) => {
-    const {Id, Title, Sites, AltTitles, Folder} = req.body;
+    const {Id, Title, Folder, Sites } = req.body;
     if (Id === null || Id === undefined || Id != req.params.bookId)
     {
         console.log("Book specified does not match url provided.", req.body)
-        res.status(500).send('Book specified does not match url provided. Cannot update.')
+        res.status(400).send('Book specified does not match url provided. Cannot update.')
         return
     }
     if (Title === null || Title === undefined || Folder === null || Folder === undefined || Sites === null || Sites === undefined || Sites.length < 1)
     {
         console.log("Missing required properties for the book.", req.body)
-        res.status(500).send('Missing one or more required properties for the book. Cannot update.')
+        res.status(400).send('Missing one or more required properties for the book. Cannot update.')
         return
     }
-    res.status(500).send('TO BE DEVELOPED!')
+    try{
+        bookHelper.saveBook(req.body);
+        res.send(`Book ${req.params.bookId} updated.`)
+    }
+    catch(ex){
+        console.log(ex)
+        res.status(500).send(ex)
+    }
     //console.log(req.body)
     //res.send(`Attempting to update book ${req.params.bookId}`)
 })
-app.put('/book/:bookId/sites', (req, res) => {
-    const {Url, Image} = req.body;
+app.put('/book/:bookId/sites', async (req, res) => {
+    const {Url, SiteId} = req.body;
     if (Url === null || Url === undefined)
     {
         console.log("Must specify a minimum of a URL.", req.body)
-        res.status(500).send('Must specify a minimum of a URL')
+        res.status(400).send('Must specify a minimum of a URL')
         return
     }
-    res.status(500).send('TO BE DEVELOPED!')
+    try{
+        const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+        bookHelper.addSite(browser, req.params.bookId, SiteId, Url);
+        res.send(`Added new site to ${req.params.bookId}`)
+    }
+    catch(ex){
+        console.log(ex)
+        res.status(500).send(`Error saving site for book ${req.params.bookId}: ${ex}`)
+    }
 })
 app.delete('/book/:bookId/site/:siteId', (req, res) => {
-    // must have more than zero left...
-    res.status(500).send('TO BE DEVELOPED!')
+    bookHelper.deleteSite(req.params.bookId, req.params.siteId)
+    res.send(`Site ${req.params.siteId} for book ${req.params.bookId} deleted.`)
+})
+app.delete('/book/:bookId/site/:siteId/chapter/:chapter', (req, res) => {    
+    bookHelper.deleteChapterBySite(req.params.bookId, req.params.siteId, req.params.chapter)
+    res.send(`Chapter ${req.params.chapter} for book ${req.params.bookId}, site ${req.params.siteId} deleted.`)
+})
+app.delete('/book/:bookId/site/:siteId/chapters/', (req, res) => {
+    bookHelper.deleteSiteChapters(req.params.bookId, req.params.siteId);
+    res.send(`All chapters for book ${req.params.bookId}, site ${req.params.siteId} deleted.`)
 })
 app.post('/book/:bookId/site/:siteId', (req, res) => { 
     const {SiteId, Url, Image, LastAttempted, LastSuccessful} = req.body;
     if (SiteId === null || SiteId === undefined || SiteId != req.params.siteId)
     {
         console.log("Site specified does not match url provided.", req.body)
-        res.status(500).send('Site specified does not match url provided. Cannot update.')
+        res.status(400).send('Site specified does not match url provided. Cannot update.')
         return
     }
     if (Url === null || Url === undefined)
     {
         console.log("Missing required properties for the site.", req.body)
-        res.status(500).send('Missing one or more required properties for the site. Cannot update.')
+        res.status(400).send('Missing one or more required properties for the site. Cannot update.')
         return
     }
     res.status(500).send('TO BE DEVELOPED!')
     console.log(req.body)
     res.send(`Attempting to update link ${req.params.siteId} for book ${req.params.bookId}`)
-})
-
-app.delete('/book/:bookId/site/:siteId/allChapters', (req, res) => {
-    // must have more than zero left...
-    res.status(500).send('TO BE DEVELOPED!')
-})
-app.delete('/book/:bookId/site/:siteId/chapter/:chapter', (req, res) => {
-    // must have more than zero left...
-    res.status(500).send('TO BE DEVELOPED!')
 })
 
 app.post('/book/:bookId/chapter/:chapter/flagRead', (req, res) => {
@@ -230,6 +228,27 @@ app.post('/book/:bookId/chapters/flagRead', (req, res) => {
 app.post('/book/:bookId/chapters/flagUnread', (req, res) => {
     bookHelper.flagAllUnread(req.params.bookId)
     res.send(`Flag all chapters unread for book ${req.params.bookId}`)
+})
+
+app.post('/parse', async (req, res) => {
+    const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+    if(req.query.url === undefined)
+    {
+        console.log("Please specify a url attempt to parse.")
+        res.status(400).send('Please specify a url to attempt to parse')
+        return
+    }
+    const siteList = bookHelper.getSites();
+    if (siteList.filter(s => req.query.url.match(s)).length === 0){
+        console.log("Url is not from a configured site.")
+        res.status(400).send('Url is not from a configured site')
+    }
+
+    const site = await bookHelper.testParseUrl(browser, req.query.url);
+    if (site == null)
+        res.status(500).send('could not parse site!')
+    else
+        res.json(site)
 })
 
 app.listen(port, () => {

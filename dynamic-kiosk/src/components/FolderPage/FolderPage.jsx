@@ -4,15 +4,14 @@ import BookList from './BookList'
 import FolderHeader from './FolderHeader'
 import ServerAddress from "../../services/api";
 import  { useSearchParams } from "react-router-dom";
+import {CircularProgress} from '@mui/material'
 
 
 export default function FolderPage(props){
     let { folder } = useParams();
-    //let query = useQuery();
-    //console.log(query.get("site"));
     let [searchParams, setSearchParams] = useSearchParams();
     const setSite = (newSite) => {
-        console.log(searchParams)
+        //console.log(searchParams)
         if (newSite == null){
             delete searchParams.site
             setSearchParams({...searchParams})
@@ -43,9 +42,7 @@ export default function FolderPage(props){
                 throw response
             })
             .then(data => {
-                let tempBookList = [...data]
-                tempBookList.forEach(x => x.status = "idle")
-                setBookList(tempBookList)
+                setBookList(data)
             })
             .catch(error => {
                 console.error("Error fetching data: ", error)
@@ -76,28 +73,15 @@ export default function FolderPage(props){
     useEffect(() => {
         if (updateList.length > 0 && !cancelUpdate)
         {
-
             const bookItem = updateList.shift()
             console.log(`Checking updates for ${bookItem.bookId}`)
-            //const bookItem = updateList.pop()
-            let book = bookList.find(x => x.Id.toString() === bookItem.bookId.toString())
-            book.status = "checking"
-            setBookList(bookList)
-            //setBookList([...bookList])
             fetch(`${ServerAddress}/book/${bookItem.bookId}/site/${bookItem.siteId}/checkForUpdates`, {method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                .then(checkResponse => {
-                    book.status = "idle"
-                    //console.log(bookList)
-                    //setBookList([...bookList])
-                    setBookList(bookList)
+                .then(() => {
                     setUpdateList([...updateList])
                 })
         }
         else if (updateList.length > 0 && cancelUpdate)
         {
-            console.log("reset book list?")
-            bookList.forEach(b => {b.status = "idle"})
-            setBookList(bookList)
             setUpdateList([])
             //setCancelUpdate(false)
         }
@@ -114,26 +98,15 @@ export default function FolderPage(props){
                 if (site == null || s.Url.match(site))
                 {
                     listToUpdate.push({ bookId: b.Id, siteId : s.SiteId })
-                    //b.status = "queued"
                 }
             })
         })
-        listToUpdate.forEach(b => {
-            //console.log(tempList.find(x => x.Id === b.bookId))
-            tempList.find(x => x.Id === b.bookId).status = "queued"
-            //console.log(tempList.find(x => x.Id === b.bookId))
-        })        
-        //console.log(tempList[42])
-        setBookList(tempList)
         setUpdateList(listToUpdate)
         setCancelUpdate(false)
     }
     const handleCancelUpdate = () => {
         console.log("Canceling update...")
         setCancelUpdate(true)
-
-        bookList.forEach(b => {b.status = "idle"})
-        setBookList([...bookList])
     }
     const handleReloadBook =(bookId) =>{
         console.log(`Reload book ${bookId}`)
@@ -166,6 +139,8 @@ export default function FolderPage(props){
     const bookListUrls = ((bookList == null) ? [] : bookList.map(b => b.Sites.map(s => s.Url)).flat())
     const effectiveSiteList = siteList == null ? [] : siteList.filter(s => bookListUrls.filter(u => u.match(s)).length > 0)
     //console.log(effectiveSiteList);
+    if (siteListLoading|| bookListLoading)
+        return <CircularProgress/>
     return (<>
         <FolderHeader
             folder={folder}
@@ -175,6 +150,7 @@ export default function FolderPage(props){
             selectedSite={site}
             onUpdateClick={handleUpdateClick}
             onCancelUpdate={handleCancelUpdate}
+            running={updateList.length}
             />
         {loading ? <>loading</> : error ? <>error encountered loading data for folder: {error}</> : (
             <BookList
@@ -182,6 +158,7 @@ export default function FolderPage(props){
                 selectedSite={site}
                 onReloadBook={handleReloadBook}
                 siteList={siteList}
+                updateList={updateList}
             />
         )}
     </>)

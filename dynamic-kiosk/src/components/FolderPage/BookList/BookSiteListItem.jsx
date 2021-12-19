@@ -4,12 +4,7 @@ import { Update, KeyboardArrowDown, KeyboardArrowUp, Web } from '@mui/icons-mate
 import SiteStatus from "../../SiteStatus";
 import ChapterList from '../ChapterList'
 import {isMobile} from 'react-device-detect';
-
-const openInNewTab = (url) => {
-    console.log("here:", url)
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-    if (newWindow) newWindow.opener = null
-}
+import { openInNewTab } from "../../../helpers/sharedFunctions";
 
 const BookSiteListItem = (props) => {    
     const {siteRowId, onExpand, expanded, site, checkForUpdate, checkingTriggered, onFlagRead, siteList, book} = props;

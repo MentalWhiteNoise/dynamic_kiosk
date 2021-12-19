@@ -1,20 +1,18 @@
 import React, {useState} from "react";
-import { Table, TableBody, TableCell, TableHead, TableRow, Button, TablePagination } from "@mui/material";
+import { Table, TableBody, TableCell, TableHead, TableRow, TablePagination } from "@mui/material";
 import BookListItem from './BookListItem'
-import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
-import UnreadFilter from "./UnreadFilter";
-import TitleFilter from "./TitleFilter";
-import StatusFilter from "./StatusFilter"
 import {BrowserView, MobileView} from 'react-device-detect';
-import  { useLocation, useSearchParams } from "react-router-dom";
+import  { useSearchParams } from "react-router-dom";
+import { applyColumnSort } from "../../../helpers/sharedFunctions";
+import ColumnHeader from "../../TableHelpers/ColumnHeader";
+import { TextFilter, IntRangeFilter, OptionFilter } from "../../TableHelpers/Filters";
+import SiteStatus from "../../SiteStatus";
 
 export default function BookList(props){
-    let { bookList, selectedSite, onReloadBook, siteList } = props;
+    let { bookList, selectedSite, onReloadBook, siteList, updateList } = props;
     let [searchParams, setSearchParams] = useSearchParams();
     const setSearchFilter = (property, filterText) => {
-        
         const paramObject = Object.fromEntries([...searchParams])
-        console.log(paramObject)
         if (filterText == null){
             delete paramObject[property]
             setSearchParams({...paramObject})
@@ -33,11 +31,7 @@ export default function BookList(props){
     const [pageSize, setPageSize] = useState(10);
     const [sortColumn, setSortColumn] = useState("title");
     const [sortDesc, setSortDesc] = useState("false");
-    const [openElement, setOpenElement] = useState({ 
-        status: null,
-        title: null, 
-        unread: null,
-    })
+
     const handleExpand = (index) => {
         //console.log("here", index)
         if (expanded === index)
@@ -46,7 +40,7 @@ export default function BookList(props){
             setExpanded(index)
     }
     const handleSort = (column) => {
-        console.log("handleSort", sortColumn, column, sortDesc)
+        //console.log("handleSort", sortColumn, column, sortDesc)
         if (column === sortColumn)
         {
             setSortDesc(!sortDesc)
@@ -57,16 +51,11 @@ export default function BookList(props){
             setSortDesc(false)
         }
     }
-    const onFilterClose = (item, value) =>{
+    const onFilterApply = (item, value) =>{
         setSearchFilter(item, value) 
-        setOpenElement({...openElement, [item]: null})
     }
-    const onFilterClear = (item, dflt) =>{
+    const onFilterClear = (item) =>{
         setSearchFilter(item, null) 
-        setOpenElement({...openElement, [item]: null})
-    }
-    const onFilterOpen = (item, element) => {
-        setOpenElement({...openElement, [item]: element})
     }
     
     const filterAmount = unreadFilter === null ? null : parseInt(unreadFilter);
@@ -89,63 +78,41 @@ export default function BookList(props){
     })
     //console.log(filteredItems.length)
     const rows = filteredItems.sort((a,b) => {
-            if (sortColumn === "title")
-            {
-                if (a.Title > b.Title) return (sortDesc) ? 1 : -1
-                if (a.Title < b.Title) return (sortDesc) ? -1 : 1
-                return 0
-            }
-            if (sortColumn === "unread")
-            {
-                if (a.CountUnread > b.CountUnread) return (sortDesc) ? 1 : -1
-                if (a.CountUnread < b.CountUnread) return (sortDesc) ? -1 : 1
-                if (a.Title > b.Title) return 1
-                if (a.Title < b.Title) return -1
-                return 0
-            }
-            if (sortColumn === "status")
-            {
-                if (a.Status > b.Status) return (sortDesc) ? 1 : -1
-                if (a.Status < b.Status) return (sortDesc) ? -1 : 1
-                if (a.Title > b.Title) return 1
-                if (a.Title < b.Title) return -1
-                return 0
-            }
+            if (sortColumn === "title") return applyColumnSort (a, b, "Title", sortDesc)
+            if (sortColumn === "unread") return applyColumnSort (a, b, "CountUnread", sortDesc, "Title")
+            if (sortColumn === "status") return applyColumnSort (a, b, "Status", sortDesc, "Title")
             return 0
         })
         .slice((page - 1) * pageSize, page * pageSize)
 
     const maxUnread = Math.max.apply(null, [...bookList.map(b => b.CountUnread + 0), 10])
-    const statusList = [...new Set(bookList.map(b => b.Status))]
+    const statusOptions = bookList == null ? null : [...new Set(bookList.map(b => b.Status))].map(s => {return { label: (<SiteStatus status={s} checkingTriggered={false}/>), value:s}})
     const unreadHeader = <>
-        <Button onClick={()=>handleSort("unread")}>Unread{ sortColumn === "unread" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
-        <UnreadFilter
+        <ColumnHeader text="Unread" sort={sortColumn === "unread" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("unread")} />
+        <IntRangeFilter
             filter={{value: unreadFilter, mode: unreadFilterMode}}
-            openElement={openElement.unread}
-            onFilterOpen={onFilterOpen}
-            onFilterClose={onFilterClose}
-            onFilterClear={onFilterClear}
-            maxUnread={maxUnread}
-        /></>
+            onFilterClear={() => onFilterClear("unread")}
+            onFilterApply={(v) => onFilterApply("unread", v)}
+            maxUnread={maxUnread || 100}
+            label="Unread Count"
+        />
+        </>
     const statusHeader = <>
-        <Button onClick={()=>handleSort("status")}>Status{ sortColumn === "status" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
-        <StatusFilter
+        <ColumnHeader text="Status" sort={sortColumn === "status" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("status")} />
+        <OptionFilter
             filter={statusFilter}
-            openElement={openElement.status}
-            onFilterOpen={onFilterOpen}
-            onFilterClose={onFilterClose}
-            onFilterClear={onFilterClear}
-            statusList={statusList}
+            onFilterApply={(v) => onFilterApply("status", v)}
+            onFilterClear={() => onFilterClear("status")}
+            options={statusOptions}
         />
         </>
     const titleHeader = <>
-        <Button onClick={()=>handleSort("title")}>Book Title{ sortColumn === "title" ? sortDesc ? <ArrowDownward/> : <ArrowUpward/> : <></> }</Button>
-        <TitleFilter
+        <ColumnHeader text="Book Title" sort={sortColumn === "title" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("title")} />
+        <TextFilter
             filter={titleFilter}
-            openElement={openElement.title}
-            onFilterOpen={onFilterOpen}
-            onFilterClose={onFilterClose}
-            onFilterClear={onFilterClear}
+            onFilterClear={() => onFilterClear("title")}
+            onFilterApply={(v) => onFilterApply("title", v)}
+            label="Title"
         />
         </>
     
@@ -162,7 +129,7 @@ export default function BookList(props){
                 </TableHead>
                 <TableBody>
                     {rows.map((x, i) => (
-                        <BookListItem key={i} book={x} expanded={expanded} onExpand={handleExpand} selectedSite={selectedSite} onReloadBook={onReloadBook} siteList={siteList} />
+                        <BookListItem key={i} book={x} expanded={expanded} onExpand={handleExpand} selectedSite={selectedSite} onReloadBook={onReloadBook} siteList={siteList} loading={updateList.filter(u => u.bookId === x.Id)} />
                     ))}
                 </TableBody>
             </Table>

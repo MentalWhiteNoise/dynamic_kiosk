@@ -1,16 +1,8 @@
 import React from "react";
 import { TableCell, TableRow, IconButton, Button, Tooltip } from "@mui/material";
 import { OpenInBrowser, Bookmark } from "@mui/icons-material";
+import { openInNewTab, formatDate } from "../../../helpers/sharedFunctions";
 
-const openInNewTab = (url) => {
-    //console.log("here:", url)
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-    if (newWindow) newWindow.opener = null
-}
-const formatDate= (date) =>{
-  if (date == null) return null
-  return (new Date(date)).toISOString().substring(0,10)
-}
 export default function ChapterListItem(props){
     const {chapter, link, onFlagRead} = props;
     return (
