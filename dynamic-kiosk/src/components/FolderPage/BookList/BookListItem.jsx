@@ -5,12 +5,8 @@ import { Bookmark, BookmarkBorder, Edit, AutoStories } from '@mui/icons-material
 import BookSiteListItem from "./BookSiteListItem";
 import ServerAddress from "../../../services/api";
 import {isMobile} from 'react-device-detect';
+import { openInNewTab } from "../../../helpers/sharedFunctions";
 
-function openInNewTab(url){
-    //console.log("here:", url)
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
-    if (newWindow) newWindow.opener = null
-}
 export default function BookListItem(props){
     const {onExpand, expanded, selectedSite, onReloadBook, siteList, loading} = props;
 
