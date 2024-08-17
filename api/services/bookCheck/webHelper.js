@@ -7,7 +7,7 @@ var isWin = process.platform === "win32";
 const getBrowser = (headless) => { 
     if (isWin)
         return puppeteer.launch({
-            //headless: false,
+            headless: headless,
             setJavaScriptEnabled: true,
             //slowMo: 250, 
             //executablePath: '/usr/bin/chromium-browser'

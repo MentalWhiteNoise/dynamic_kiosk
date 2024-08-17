@@ -5,12 +5,16 @@ const querystring = require('querystring');
 const bookHelper = require('./services/bookCheck/bookHelper')
 const webHelper = require('./services/bookCheck/webHelper');
 const { query } = require('express');
-
 const app = express()
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '500mb'}));
 app.use(cors())
 const port = 8080
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "X-Requested-With");
+    next();
+    });
 
 app.get('/sites', (req, res) => {
     const siteList = bookHelper.getSites()
@@ -230,7 +234,7 @@ app.post('/book/:bookId/chapters/flagUnread', (req, res) => {
     res.send(`Flag all chapters unread for book ${req.params.bookId}`)
 })
 
-app.post('/parse', async (req, res) => {
+app.post('/parse/parseurl', async (req, res) => {
     const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
     if(req.query.url === undefined)
     {
@@ -249,6 +253,82 @@ app.post('/parse', async (req, res) => {
         res.status(500).send('could not parse site!')
     else
         res.json(site)
+})
+
+app.post('/parse/getpagecontents', async (req, res) => {
+    const browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+    const {PostLoad, MultiPage, Url} = req.body;
+    if(Url === undefined)
+    {
+        console.log("Please specify a url.")
+        res.status(400).send('Please specify a url')
+        return
+    }
+
+    const rtrn = await bookHelper.getPageContents(browser, Url, PostLoad, MultiPage);
+    if (rtrn == null)
+        res.status(500).send('could not load url!')
+    else
+        res.json(rtrn)
+})
+app.post('/parse/parsetext', async (req, res) => {
+    const {PostLoad, ParseConfig, Url, Contents, MultiPage} = req.body;
+    var contentsText = Contents
+    if (Contents === undefined) {
+        var browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+        if(Url === undefined)
+        {
+            console.log("Please specify a url.")
+            res.status(400).send('Please specify a url')
+            return
+        }
+        contentsText = await bookHelper.getPageContents(browser, Url, PostLoad, MultiPage);
+    }
+    console.log(contentsText.length)
+    const rtrn = bookHelper.parseText(ParseConfig, contentsText)
+    if (rtrn == null)
+        res.status(500).send('could not parse text or load url!')
+    else
+        res.json(rtrn)
+})
+app.post('/parse/parsechapterblocks', async (req, res) => {
+    const {PostLoad, ChapterBlockConfig, SplitChapterText, Url, ChapterNumber, Contents, MultiPage} = req.body;
+    var contentsText = Contents
+    if (Contents === undefined)
+    {
+        var browser = await webHelper.getBrowser(req.query == null || !req.query.headless);
+        if(Url === undefined)
+        {
+            console.log("Please specify a url.")
+            res.status(400).send('Please specify a url')
+            return
+        }
+        contentsText = await bookHelper.getPageContents(browser, Url, PostLoad, MultiPage);
+    }
+
+    console.log(contentsText.length)
+    const chapters = bookHelper.parseChapterBlocks(ChapterBlockConfig, SplitChapterText, contentsText)
+    var rtrn = null
+    if (ChapterNumber == undefined)
+    {
+        var chapterSample = chapters.slice(0,3)
+        if (chapters.length > 3)
+            chapterSample.push(chapters[chapters.length-1])
+        rtrn = {
+            chapterCount: chapters.length,
+            sampleChapters: chapterSample
+        }
+    }
+    else {
+        rtrn = {
+            chapterCount: chapters.length,
+            sampleChapters: chapters[ChapterNumber]
+        }
+    }
+    if (rtrn == null)
+        res.status(500).send('could not parse text or load url!')
+    else
+        res.json(rtrn)
 })
 
 app.listen(port, () => {

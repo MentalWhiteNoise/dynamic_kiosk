@@ -1,6 +1,19 @@
 const webHelper = require('./webHelper');
 const helper = require('./genericHelper');
 
+async function getContents(browser, url, multiPage, postLoad)
+{
+    contents = await webHelper.getUrlContents(browser, url, postLoad)
+    if (multiPage && multiPage != null) {
+        try {
+            const nextPageUrl = parseText(multiPage.nextPageUrl, content);
+            const nextPageContents = getContents(browser, nextPageUrl, null, postLoad);
+            return [contents, nextPageContents]
+        }
+        catch { }
+    }
+    return contents
+}
 async function parseContents(browser, url, multiPage, sites)
 {
     let rtrn = {};
@@ -187,6 +200,16 @@ function parseText (methods, text) {
         return null;
     }
 }
+function parseChapterBlocks(chapterBlockConfig, splitChapterText, content)
+{
+    const chapterText = parseText(chapterBlockConfig, content);
+    if (helper.isNullOrWhiteSpace(chapterText)) {
+        console.log(`Error parsing chapters for ${url}`);
+        return null;
+    }
+    const chaptersRaw = helper.replaceAll(chapterText, splitChapterText, String.fromCharCode(30)).split(String.fromCharCode(30));
+    return chaptersRaw;
+}
 function cleanHtmlText(text)
 {
     text = text.trim();
@@ -220,4 +243,4 @@ function movePastElement(text)
     }
     return text;
 }
-module.exports = { parseContents};
+module.exports = { parseContents, getContents, parseText, parseChapterBlocks };

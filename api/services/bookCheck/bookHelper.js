@@ -398,6 +398,20 @@ async function checkSiteForChapters(browser, book, site, existingChapters)
     }
     return rtrn;
 }
+async function getPageContents(browser, url, postLoad, multiPage)
+{
+    const parsedContent = await parseHelper.getContents(browser, url, multiPage, postLoad)
+
+    return parsedContent;
+}
+function parseText(parseConfig, content)
+{
+    return parseHelper.parseText(parseConfig, content)
+}
+function parseChapterBlocks(chapterBlockConfig, splitChapterText, content)
+{
+    return parseHelper.parseChapterBlocks(chapterBlockConfig, splitChapterText, content)
+}
 async function testParseUrl(browser, url)
 {
     let site = {
@@ -601,4 +615,6 @@ module.exports = { getSites, getSiteConfig,
     saveBook, addBook, removeBook, 
     deleteChapterBySite, deleteSite, deleteSiteChapters, 
     checkBook, checkBookAtSite, testParseUrl,
-    flagAllRead, flagAllUnread, flagRead, flagUnread};
+    flagAllRead, flagAllUnread, flagRead, flagUnread,
+    getPageContents, parseText, parseChapterBlocks
+};

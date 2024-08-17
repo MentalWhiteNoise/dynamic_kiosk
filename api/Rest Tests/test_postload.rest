@@ -1,0 +1,8 @@
+POST http://localhost:8080/test/postload HTTP/1.1
+Content-Type: application/json
+
+    {
+        "postload": {},
+        "Url": "https://mangapark.net/title/263958-en-i-picked-a-hammer-to-save-the-world"
+    }
+###

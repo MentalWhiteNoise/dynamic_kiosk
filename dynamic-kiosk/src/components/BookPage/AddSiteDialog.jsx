@@ -45,7 +45,7 @@ export default function AddSiteDialog(props){
     const parseSiteUrl = () =>{
         setSiteState("parsing")
         setParseError(null)
-        fetch(`${ServerAddress}/parse?` + new URLSearchParams({url: url}), {method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        fetch(`${ServerAddress}/parse/parseurl?` + new URLSearchParams({url: url}), {method: 'POST', headers: { 'Content-Type': 'application/json' } })
             .then(response =>{
                 if (response.ok){
                     return response.json();
