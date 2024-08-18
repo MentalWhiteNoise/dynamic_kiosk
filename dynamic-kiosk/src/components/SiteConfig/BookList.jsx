@@ -32,7 +32,11 @@ function formatDate(dateString){
     }
 }
 export default function BookList(props) {
-    const {site, bookList, onSelectExampleUrl} = props;
+    const {site, bookList, onSelectExampleUrl, editMode} = props;
+    /*console.log(site)
+    for (var bk of bookList){
+        console.log(bk)
+    }*/
     return (
         <TableContainer component={Paper}>
             <Table  size="small" aria-label="simple table">
@@ -49,21 +53,19 @@ export default function BookList(props) {
                 </TableRow>
                 </TableHead>
                 <TableBody>
-                {bookList.map((row) => (
+                {(bookList ?? []).map((row) => (
                     <StyledTableRow key={row.Id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                     <StyledTableCell>{row.Title}</StyledTableCell>
                     <StyledTableCell>{row.Folder}</StyledTableCell>
                     <StyledTableCell>
-                        {
-                        //<Tooltip title="Use as example URL">
-                        }
+                        { editMode ? (
+                        <Tooltip title="Use as example URL">
                             <IconButton aria-label="Use as example URL" size="small" onClick={(e) => {onSelectExampleUrl(row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Url)}}>
                                 <AssistantIcon fontSize="inherit" />
                             </IconButton>
-                        {
-                        //</Tooltip>
+                        </Tooltip>) : <IconButton aria-label="Use as example URL" size="small" disabled={true}><AssistantIcon fontSize="inherit" /></IconButton>
                         }
-                        <a href={row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Url} target="_blank">{row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Url}</a></StyledTableCell>
+                        <a href={row.Sites.filter((x) => x.Url && x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Url} target="_blank">{row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Url}</a></StyledTableCell>
                     <StyledTableCell>{formatDate(row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].LastAttempted)}</StyledTableCell>
                     <StyledTableCell>{formatDate(row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].LastSuccessful)}</StyledTableCell>
                     <StyledTableCell>{row.Sites.filter((x) => x.Url.toLowerCase().startsWith(site.site.toLowerCase()))[0].Status}</StyledTableCell>

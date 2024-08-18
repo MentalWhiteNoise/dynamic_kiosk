@@ -7,7 +7,7 @@ import ServerAddress from "../../services/api";
 //import { Link } from "react-router-dom";
 
 export default function ParseChapters(props) {
-    const {site, onSiteUpdate, exampleContents} = props;
+    const {site, onSiteUpdate, exampleContents, onError} = props;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [exampleChapterBlock, setExampleChapterBlock] = useState(null);
@@ -68,11 +68,11 @@ export default function ParseChapters(props) {
             .then(data => {
                 setMethod(data)
             })
-            /*.catch(error => {
-                console.error("Error loading page contents: ", error)
-                setError(error);
+            .catch(error => {
+                onError("Error parsing content")
+                console.error("Error parsing content: ", error)
             })
-            .finally(() => {
+            /*.finally(() => {
                 setLoading(false);
             })*/
     }
@@ -112,11 +112,11 @@ export default function ParseChapters(props) {
                 setExampleChapterNumber("")
                 setExampleChapters(data)
               })
-              /*.catch(error => {
-                  console.error("Error loading page contents: ", error)
-                  setError(error);
+              .catch(error => {
+                  onError("Error parsing chapters")
+                  console.error("Error parsing chapters: ", error)
               })
-              .finally(() => {
+              /*.finally(() => {
                   setLoading(false);
               })*/
     }

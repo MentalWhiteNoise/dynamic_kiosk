@@ -7,9 +7,7 @@ import ServerAddress from "../../services/api";
 //import { Link } from "react-router-dom";
 
 export default function ParseTitle(props) {
-    const {site, onSiteUpdate, exampleContents} = props;
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const {site, onSiteUpdate, exampleContents, onError} = props;
     const [exampleTitle, setExampleTitle] = useState(null);
     const [exampleAltTitle, setExampleAltTitle] = useState(null);
     const [exampleImage, setExampleImage] = useState(null);
@@ -64,11 +62,11 @@ export default function ParseTitle(props) {
             .then(data => {
                 setMethod(data)
             })
-            /*.catch(error => {
+            .catch(error => {
+                onError("Error parsing content")
                 console.error("Error loading page contents: ", error)
-                setError(error);
             })
-            .finally(() => {
+            /*.finally(() => {
                 setLoading(false);
             })*/
     }

@@ -5,7 +5,6 @@ import ParsingSection from "./ParsingSection";
 
 export default function PageLoad(props) {
     const {site, onSiteUpdate, exampleUrl, onExampleUrlUpdate, exampleContents, onLoadExampleContents} = props;
-
     const [contentsOpen, setContentsOpen] = React.useState(false);
     if (site == null) return <></>
     //console.log(site)
