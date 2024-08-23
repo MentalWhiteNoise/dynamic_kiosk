@@ -11,26 +11,32 @@ import SiteStatus from "../../SiteStatus";
 export default function BookList(props){
     let { bookList, selectedSite, onReloadBook, siteList, updateList } = props;
     let [searchParams, setSearchParams] = useSearchParams();
-    const setSearchFilter = (property, filterText) => {
+    const clearSerarchFilter = (setting) => {
         const paramObject = Object.fromEntries([...searchParams])
-        if (filterText == null){
-            delete paramObject[property]
-            setSearchParams({...paramObject})
-        }
-        else
-            setSearchParams({...paramObject, [property]: filterText})
+        delete paramObject[setting]
+        setSearchParams({...paramObject})
     }
+    const setSearchFilter = (newSettings) => {
+        const paramObject = Object.fromEntries([...searchParams])
+        setSearchParams({...paramObject, ...newSettings})
+    }
+    // Add paging; add sorting...
     const titleFilter = searchParams.get("title");
     const statusFilter = searchParams.get("status");
     const unreadFilter = searchParams.get("unread") === null ? null : searchParams.get("unread").substring(1);
     const unreadFilterMode = searchParams.get("unread") === null ? "gt": searchParams.get("unread")[0] === "<" ? "lt" : "gt";
 
+    const page = searchParams.get("page") ?? 1;
+    const pageSize = searchParams.get("pageSize") ?? 10;
+    const sortColumn = searchParams.get("sortColumn") ?? "title";
+    const sortDesc = searchParams.get("sortDesc") == "true";
+    
     //console.log(bookList[0])
     const [expanded, setExpanded] = useState(null);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [sortColumn, setSortColumn] = useState("title");
-    const [sortDesc, setSortDesc] = useState("false");
+    //const [page, setPage] = useState(1);
+    //const [pageSize, setPageSize] = useState(10);
+    //const [sortColumn, setSortColumn] = useState("title");
+    //const [sortDesc, setSortDesc] = useState("false");
 
     const handleExpand = (index) => {
         //console.log("here", index)
@@ -43,19 +49,12 @@ export default function BookList(props){
         //console.log("handleSort", sortColumn, column, sortDesc)
         if (column === sortColumn)
         {
-            setSortDesc(!sortDesc)
+            setSearchFilter({"sortDesc": !sortDesc})
         }
         else
         {
-            setSortColumn(column);
-            setSortDesc(false)
+            setSearchFilter({"sortColumn": column, "sortDesc": false})
         }
-    }
-    const onFilterApply = (item, value) =>{
-        setSearchFilter(item, value) 
-    }
-    const onFilterClear = (item) =>{
-        setSearchFilter(item, null) 
     }
     
     const filterAmount = unreadFilter === null ? null : parseInt(unreadFilter);
@@ -91,8 +90,8 @@ export default function BookList(props){
         <ColumnHeader text="Unread" sort={sortColumn === "unread" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("unread")} />
         <IntRangeFilter
             filter={{value: unreadFilter, mode: unreadFilterMode}}
-            onFilterClear={() => onFilterClear("unread")}
-            onFilterApply={(v) => onFilterApply("unread", v)}
+            onFilterClear={() => clearSerarchFilter("unread")}
+            onFilterApply={(v) => setSearchFilter({"unread": v})}
             maxUnread={maxUnread || 100}
             label="Unread Count"
         />
@@ -101,8 +100,8 @@ export default function BookList(props){
         <ColumnHeader text="Status" sort={sortColumn === "status" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("status")} />
         <OptionFilter
             filter={statusFilter}
-            onFilterApply={(v) => onFilterApply("status", v)}
-            onFilterClear={() => onFilterClear("status")}
+            onFilterClear={() => clearSerarchFilter("status")}
+            onFilterApply={(v) => setSearchFilter({"status": v})}
             options={statusOptions}
         />
         </>
@@ -110,8 +109,8 @@ export default function BookList(props){
         <ColumnHeader text="Book Title" sort={sortColumn === "title" ? sortDesc ? "desc" : "asc" : null} onSortClick={() => handleSort("title")} />
         <TextFilter
             filter={titleFilter}
-            onFilterClear={() => onFilterClear("title")}
-            onFilterApply={(v) => onFilterApply("title", v)}
+            onFilterClear={() => clearSerarchFilter("title")}
+            onFilterApply={(v) => setSearchFilter({"title": v})}
             label="Title"
         />
         </>
@@ -160,8 +159,8 @@ export default function BookList(props){
             count={filteredItems.length}
             rowsPerPage={pageSize}
             page={page-1}
-            onPageChange={(e,v) => setPage(v+1)}
-            onRowsPerPageChange={(e) => setPageSize(e.target.value+0)}
+            onPageChange={(e,v) => setSearchFilter({"page": v+1})}
+            onRowsPerPageChange={(e) => setSearchFilter({"pageSize": e.target.value+0})}
         />
     </>)
 }

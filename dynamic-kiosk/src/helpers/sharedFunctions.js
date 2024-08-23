@@ -8,8 +8,8 @@ export const formatDate= (date) =>{
     return (new Date(date)).toISOString().substring(0,10)
 } 
 export const applyColumnSort = (valueA, valueB, sortOnProp, sortDesc, defaultSortProp) => {    
-    if (valueA[sortOnProp] > valueB[sortOnProp]) return (sortDesc) ? 1 : -1
-    if (valueA[sortOnProp] < valueB[sortOnProp]) return (sortDesc) ? -1 : 1
+    if (valueA[sortOnProp] > valueB[sortOnProp]) return (sortDesc) ? -1 : 1
+    if (valueA[sortOnProp] < valueB[sortOnProp]) return (sortDesc) ? 1 : -1
     if (defaultSortProp && valueA[defaultSortProp] > valueB[defaultSortProp]) return 1
     if (defaultSortProp && valueA[defaultSortProp] < valueB[defaultSortProp]) return -1
     return 0

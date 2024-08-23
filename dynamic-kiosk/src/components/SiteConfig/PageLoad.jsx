@@ -1,11 +1,14 @@
-import React, {} from "react";
-import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import React, {useState} from "react";
+import { TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Grid, FormControlLabel, Checkbox, IconButton } from "@mui/material";
+import {Refresh } from '@mui/icons-material'
 import NavigationSection from "./NavigationSection";
 import ParsingSection from "./ParsingSection";
+import ServerAddress from "../../services/api";
 
 export default function PageLoad(props) {
-    const {site, onSiteUpdate, exampleUrl, onExampleUrlUpdate, exampleContents, onLoadExampleContents} = props;
+    const {site, onSiteUpdate, exampleUrl, onExampleUrlUpdate, exampleContents, onLoadExampleContents, onError} = props;
     const [contentsOpen, setContentsOpen] = React.useState(false);
+    const [exampleNextPageUrl, setExampleNextPageUrl] = useState(null);
     if (site == null) return <></>
     //console.log(site)
     const handleParsingMethodChange = (array, index, value) =>
@@ -43,8 +46,40 @@ export default function PageLoad(props) {
     const handleCloseContents = () => {
         setContentsOpen(false)
     }
+    const parseContent = (parsingArray, setMethod) => {
+      if (parsingArray == null || parsingArray.length == 0 || exampleContents == null)
+      {return}
+        fetch(`${ServerAddress}/parse/parsetext`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  ParseConfig: parsingArray,
+                  Contents: exampleContents,
+                })
+            })
+            .then(response =>{
+                if (response.ok){
+                    return response.json();
+                }
+                throw response
+            })
+            .then(data => {
+                setMethod(data)
+            })
+            .catch(error => {
+                onError("Error parsing content")
+                console.error("Error loading page contents: ", error)
+            })
+            /*.finally(() => {
+                setLoading(false);
+            })*/
+    }
     // OpenInBrowser
     // SystemUpdateAlt, Archive, ArrowCircleDown
+    const multiPageEnabled = site.multiPage != null && site.multiPage.nextPageUrl != null
 
     return (
         <>
@@ -92,21 +127,56 @@ export default function PageLoad(props) {
                 onExpandChange={() => {}}
                 expanded={true}
             />
-            <ParsingSection
-                label="Multi-Page: Next URL"
-                optional={true}
-                parsingArray={(site.multiPage || {nextPageUrl: null}).nextPageUrl}
-                onMethodChange={handleParsingMethodChange}
-                onStringChange={handleParsingStringChange}
-                onRemove={handleParsingMethodRemove}
-                onAdd={handleParsingMethodAdd}
-                onToggle={(checked) => {
-                    site.multiPage = {nextPageUrl: (checked) ? [{method: "readPast", string: ""}] : null} 
-                    onSiteUpdate({...site});
-                }}
-                onReorder={handleReorder}
-                onExpandChange={() => {}}
-                expanded={true}
-            />
+            <Grid container width="100%">
+            <Grid minWidth="580px">
+                <FormControlLabel control={(<Checkbox checked={multiPageEnabled} 
+                    onChange={(event) => {
+                        if (event.target.checked)
+                        {
+                            if (!site.multiPage)
+                            {site.multiPage = {"nextPageUrl": []}}
+
+                            site.multiPage.nextPageUrl.push({method: "readPast", string: ""})
+
+                        }
+                        site.multiPage.nextPageUrl = (event.target.checked) ? {"nextPageUrl": [{method: "readPast", string: ""}]} : null;
+                        onSiteUpdate({...site});
+                    }
+                } />)} label="Multi-Page: Next URL" />
+                { (multiPageEnabled) ?
+                <ParsingSection 
+                    parsingArray={(site.multiPage || {nextPageUrl: null}).nextPageUrl}
+                    onMethodChange={handleParsingMethodChange}
+                    onStringChange={handleParsingStringChange}
+                    onRemove={handleParsingMethodRemove}
+                    onAdd={
+                        (array) => {
+                            if (!site.multiPage)
+                            {site.multiPage = {"nextPageUrl": []}}
+
+                            site.multiPage.nextPageUrl.push({method: "readPast", string: ""})
+                            onSiteUpdate({...site})
+
+                        }}
+                    onReorder={handleReorder}
+                /> : <></> }
+                </Grid>
+                <Grid>
+    
+                { (multiPageEnabled) ? <>
+                Example next page:<br/>
+                <TextField
+                    multiline
+                    rows={4}
+                    defaultValue={exampleNextPageUrl}
+                    sx={{minWidth: "550px", width:"100%"}}
+                    inputProps={{ readOnly: true, }}
+                    />
+                    
+                <IconButton onClick={() => parseContent((site.multiPage || {nextPageUrl: null}).nextPageUrl, setExampleNextPageUrl)}><Refresh/></IconButton>
+    
+                </> : <></> }
+                </Grid>
+                </Grid>
     </>)    
 }

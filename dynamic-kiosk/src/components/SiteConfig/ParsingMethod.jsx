@@ -40,6 +40,8 @@ export default function ParsingMethod(props){
             <MenuItem value="movePastElement">movePastElement</MenuItem>
             <MenuItem value="remove">remove</MenuItem>
             <MenuItem value="removeOrdinalIndicator">removeOrdinalIndicator</MenuItem>
+            <MenuItem value="failIfEmpty">failIfEmpty</MenuItem>
+            
         </Select>
         </FormControl>
         {stringText}

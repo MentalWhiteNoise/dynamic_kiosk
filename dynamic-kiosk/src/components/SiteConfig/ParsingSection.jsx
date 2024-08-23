@@ -62,6 +62,9 @@ export default function ParsingSection(props){
                                         <MenuItem value="movePastElement">movePastElement</MenuItem>
                                         <MenuItem value="remove">remove</MenuItem>
                                         <MenuItem value="removeOrdinalIndicator">removeOrdinalIndicator</MenuItem>
+                                        <MenuItem value="removeHtmlComments">removeHtmlComments</MenuItem>
+                                        <MenuItem value="convertDateFromEpoch">convertDateFromEpoch</MenuItem>
+                                        <MenuItem value="failIfEmpty">failIfEmpty</MenuItem>
                                     </Select>
                                 </TableCell>
                                 <TableCell sx={{padding: 0, minWidth: "250px"}}>

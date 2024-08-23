@@ -85,16 +85,19 @@ async function parseContents(browser, url, multiPage, sites)
 function parseRow(chapterConfig, rowValue)
 {
     let parsedRow = {}
-    
+    //console.log(chapterConfig, rowValue)
     if (chapterConfig.filter != null) {
         const filterText = parseText(chapterConfig.filter.text, rowValue);
-        
-        if (chapterConfig.filter.in != null && chapterConfig.filter.in.length > 0) {
+        console.log(filterText)
+        if (chapterConfig.filter.In != null && chapterConfig.filter.In.length > 0) {
             let isIn = false;
-            chapterConfig.filter.in.forEach(s =>{
+            chapterConfig.filter.In.forEach(s =>{
                 if (s == filterText) isIn = true;
             })
-            if (!isIn) return null;
+            if (!isIn) {
+                console.log("No match")
+                return null;
+            }
         }
         if (chapterConfig.filter.notIn != null) {
             chapterConfig.filter.notIn.forEach(s =>
@@ -179,6 +182,7 @@ function parseText (methods, text) {
                     rtrn = rtrn.toLowerCase();
                     break;
                 case "prepend":
+                    if (rtrn == null || rtrn == ""){ return null}
                     rtrn = parseMethod.string + rtrn;
                     break;
                 case "movePastElement":
@@ -189,6 +193,12 @@ function parseText (methods, text) {
                     break;
                 case "removeOrdinalIndicator":
                     rtrn = rtrn.replace(/(?<=[0-9])(?:st|nd|rd|th)/, "");
+                    break;
+                case "removeHtmlComments":
+                    rtrn = removeHtmlComments(rtrn);
+                    break;
+                case "convertDateFromEpoch":
+                    rtrn = convertDateFromEpoch(rtrn);
                     break;
                 default:
                     throw `Unexpected method: ${parseMethod.method}`;
@@ -242,5 +252,15 @@ function movePastElement(text)
         return text.substring(text.indexOf("</{tag}>") + "</{tag}>".Length);
     }
     return text;
+}
+function removeHtmlComments(text)
+{
+    return text.replace(new RegExp("<!--(.*?)-->", "g"), "")
+}
+function convertDateFromEpoch(text)
+{
+    var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
+    d.setUTCMilliseconds(parseInt(text));
+    return d.toISOString()
 }
 module.exports = { parseContents, getContents, parseText, parseChapterBlocks };

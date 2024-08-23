@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from "react";
-import { Select, MenuItem, FormControl, InputLabel, Paper, IconButton, Tooltip, Grid, Container, Dialog, DialogTitle, DialogContent, DialogActions, Button, Tab, Tabs } from "@mui/material";
-import {Save, Cancel, Edit, ContentCopy, NoteAdd} from '@mui/icons-material'
+import { useNavigate, useParams } from "react-router-dom";
+import { Select, MenuItem, FormControl, InputLabel, Paper, IconButton, Tooltip, Grid, Container, Tab, Tabs } from "@mui/material";
+import {Save, Cancel, Edit, ContentCopy, NoteAdd, Report, ReportOff } from '@mui/icons-material'
 import SiteUrlDialog from "./SiteUrlDialog";
 //import { Link } from "react-router-dom";
 import BookList from "./BookList";
@@ -10,7 +11,56 @@ import ParseChapters from "./ParseChapters"
 import ErrorMessage from "../ErrorMessage"
 import ServerAddress from "../../services/api";
 
+function SetBrokenButton(props){
+    const { site, onSetBroken} = props;
+    if (site == null){
+        return <IconButton disabled={true}><Report/></IconButton>
+    }
+    if (site.broken) {
+        return <Tooltip title="Revert Broken"><IconButton onClick={() => onSetBroken(false)}><ReportOff/></IconButton></Tooltip>
+    }
+    return <Tooltip title="Flag Broken"><IconButton onClick={() => onSetBroken(true)}><Report/></IconButton></Tooltip>
+}
+function SaveChangesButton(props) {
+    const { hasChanged, onSiteSave } = props
+    if (hasChanged){
+        return <Tooltip title="Save Changes"><IconButton onClick={() => onSiteSave()}><Save/></IconButton></Tooltip>
+    }
+    return <IconButton disabled={true}><Save/></IconButton>
+}
+function CancelButton(props) {
+    const { editMode, onCancel } = props
+    if (editMode) {
+        return <Tooltip title="Cancel"><IconButton onClick={() => onCancel()}><Cancel/></IconButton></Tooltip>
+    }
+    return <IconButton disabled={true}><Cancel/></IconButton>
+}
+function SetEditModeButton(props)
+{
+    const {site, editMode, onSetEdit } = props
+    if (editMode || site == null || site.broken){
+        return <IconButton disabled={true}><Edit/></IconButton>
+    }
+    return <Tooltip title="Edit Site Settings"><IconButton onClick={() => onSetEdit()} ><Edit/></IconButton></Tooltip>
+}
+function CopyToNewButton(props){
+    const { editMode, site, onCopyToNew } = props
+    if (editMode || site == null){
+        return <IconButton disabled={true}><ContentCopy/></IconButton>
+    }
+    return <Tooltip title="Copy to New"><IconButton onClick={() => onCopyToNew()}><ContentCopy/></IconButton></Tooltip>
+}
+function CreateNewSiteButton(props){
+    const { editMode, onCreateNewSite } = props
+    if (editMode){
+        return <IconButton disabled={true}><NoteAdd/></IconButton>
+    }
+    return <Tooltip title="Create New Site"><IconButton onClick={() => onCreateNewSite()}><NoteAdd/></IconButton></Tooltip>
+}
+
 export default function SiteConfig(props){
+    let { siteId } = useParams();
+    const navigate = useNavigate();
     const [siteList, setSiteList] = useState(null);
     const [bookList, setBookList] = useState(null);
     const [filteredBookList, setFilteredBookList] = useState(null);
@@ -24,8 +74,7 @@ export default function SiteConfig(props){
     const [tabValue, setTabValue] = useState(0);
     const [exampleUrl, setExampleUrl] = useState(null);
     const [exampleContents, setExampleContents] = useState(null);
-    const [copySite, setCopySite] = useState(false);
-    
+    const [copySite, setCopySite] = useState(false);    
 
     useEffect(() => {
         fetch(`${ServerAddress}/siteconfig`)
@@ -63,14 +112,23 @@ export default function SiteConfig(props){
                 setLoading(false);
             })
     }, [])
+    useEffect(() => {
+        var selectedSite = null
+        if (siteId && siteList)
+        { 
+            setHasChanged(false)
+            var selectedSiteIndex = siteList.findIndex(obj => obj.site == siteId)
+            if (selectedSiteIndex > -1)
+            setSite(siteList[selectedSiteIndex]) 
+            selectedSite = siteList[selectedSiteIndex]?.site ?? "xxx"
+            var filteredBooks = ((bookList ?? []).filter((x) => x.Sites.filter((y) => (y.Url ?? "").toLowerCase().startsWith((siteList[selectedSiteIndex].site??"xxx").toLowerCase()) ).length > 0))
+            setFilteredBookList(filteredBooks)
+        }
+    }, [siteList, bookList, siteId])
     const handleSiteChange = (newSite) => {
         console.log("handleSiteChange")
-        setHasChanged(false)
-        setSite(siteList.find(x => x.site === newSite));
-        
-        var filteredBooks = ((bookList ?? []).filter((x) => x.Sites.filter((y) => (y.Url ?? "").toLowerCase().startsWith((newSite??"xxx").toLowerCase()) ).length > 0))
-        //console.log(filteredBooks)
-        setFilteredBookList(filteredBooks)
+        console.log(newSite)
+        navigate(`/config/${encodeURIComponent(newSite)}`)
     }
     const handleSiteUpdate = (newSite) =>
     {
@@ -96,16 +154,26 @@ export default function SiteConfig(props){
         console.log("handleSetEdit")
         setEditMode(true)
     }
-    const handleBookSave = () => {
-        console.log("handleBookSave")
+    const handleSiteSave = () => {
+        console.log("handleSiteSave")
+        if (newSiteMode){
+            addNewSite()
+        }
+        else {
+            updateSite(site)
+        }
+        setEditMode(false)
+        // Validate site
+        // If is new, PUT /siteconfig (new endpoint)
+        // If is edit, POST /siteconfig/:siteId (new endpoint)
     }
-    const handleBookCopy = () => {
-        console.log("handleBookCopy")
+    const handleSiteCopy = () => {
+        console.log("handleSiteCopy")
         setCopySite(true)
         setNewUrlDialogOpen(true)
     }
-    const handleNewBook = () => {
-        console.log("handleNewBook")
+    const handleNewSite = () => {
+        console.log("handleNewSite")
         setNewUrlDialogOpen(true)
     }
     const handleCloseNewUrlDialog = () => {
@@ -175,6 +243,8 @@ export default function SiteConfig(props){
         setExampleContents(null)
     }
     const getExampleContents = (url) => {
+        console.log(site)
+        console.log(site.postLoad)
         fetch(`${ServerAddress}/parse/getpagecontents`, {
                 method: 'POST',
                 headers: {
@@ -182,8 +252,8 @@ export default function SiteConfig(props){
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    //PostLoad: 'yourValue',
-                    //MultiPage: 'yourOtherValue',
+                    PostLoad: site.postLoad ?? [],
+                    MultiPage: site.MultiPage ?? [],
                     Url: url
                 })
             })
@@ -204,6 +274,57 @@ export default function SiteConfig(props){
                 setLoading(false);
             })
     }
+    const addNewSite = () => {
+        // Validate site config here?
+        fetch(`${ServerAddress}/siteconfig`, {method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site: site }) })
+            .then(response =>{
+                if (response.ok){
+                    return response;
+                }
+                else{
+                    throw response;
+                }
+            })
+            .then((data) => {
+                //handleSiteChange(site)
+                navigate(`/config`)
+            })
+            .catch((err) => {
+                // correct way to retrieve text from failure
+                setError("failed to add new site!");
+                console.error("failed to add new site: ", error)
+            })
+
+    }
+    const updateSite = (newSite) => {
+        // Validate site config here?
+        //console.log(JSON.stringify({ site: newSite }))
+        fetch(`${ServerAddress}/siteconfig/${encodeURIComponent(newSite.site)}`, {method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ site: newSite }) })
+            .then(response =>{
+                if (response.ok){
+                    return response;
+                }
+                else{
+                    throw response;
+                }
+            })
+            .then((data) => {
+                //handleSiteChange(site)
+                navigate(`/config`)
+            })
+            .catch((error) => {
+                // correct way to retrieve text from failure
+                setError("failed to update site!");
+                console.error("failed to update site: ", error)
+            })
+
+    }
+    const handleSetBroken = (broken) => {
+        console.log("handleSetBroken")
+        var newSite = structuredClone(site)
+        newSite.broken = broken
+        updateSite(newSite)
+    }
 
     if (loading) return "Loading...";
     //if (error) return "Error...";
@@ -220,6 +341,7 @@ export default function SiteConfig(props){
         <FormControl>
         <InputLabel id="site-select-label">Site</InputLabel>
         <Select
+            disabled={editMode}
             value={(site) ? site.site : ""}
             label="Site"
             labelId="site-select-label"
@@ -232,11 +354,12 @@ export default function SiteConfig(props){
         </FormControl>
         </Container>
         <Container sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        {hasChanged ? <Tooltip title="Save Changes"><IconButton onClick={() => handleBookSave()}><Save/></IconButton></Tooltip> : <IconButton disabled={true}><Save/></IconButton>}
-        {editMode ? <Tooltip title="Cancel"><IconButton onClick={() => handleCancel()}><Cancel/></IconButton></Tooltip> : <IconButton disabled={true}><Cancel/></IconButton>}
-        {editMode == false && site != null ? <Tooltip title="Edit Site Settings"><IconButton onClick={() => handleSetEdit()} ><Edit/></IconButton></Tooltip> : <IconButton disabled={true}><Edit/></IconButton>}
-        {editMode == false && site != null ? <Tooltip title="Copy to New"><IconButton onClick={() => handleBookCopy()}><ContentCopy/></IconButton></Tooltip> : <IconButton disabled={true}><ContentCopy/></IconButton>}
-        {editMode == false ? <Tooltip title="Create New Site"><IconButton onClick={() => handleNewBook()}><NoteAdd/></IconButton></Tooltip> : <IconButton disabled={true}><NoteAdd/></IconButton>}
+        <SaveChangesButton hasChanged={hasChanged} onSiteSave={handleSiteSave} />
+        <CancelButton editMode={editMode} onCancel={handleCancel} />
+        <SetEditModeButton site={site} editMode={editMode} onSetEdit={handleSetEdit} />
+        <CopyToNewButton editMode={editMode} site={site} onCopyToNew={handleSiteCopy} />
+        <CreateNewSiteButton editMode={editMode} onCreateNewSite={handleNewSite} />
+        <SetBrokenButton site={site} editMode={editMode} onSetBroken={handleSetBroken} />
         </Container>
         </Grid>
         </Grid>

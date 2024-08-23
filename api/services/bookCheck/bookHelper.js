@@ -31,6 +31,14 @@ function getSiteConfig()
     }
     return []
 }
+async function saveSiteList(siteList)
+{
+    let data = JSON.stringify(siteList, null, 2);
+    await fs.writeFile(`${dataFolder}/siteConfig.json`, data, (err) =>{
+        if (err) throw err;
+        console.log("Site list updated")
+    })
+}
 function getChapters(bookId){
     const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
     if (fs.existsSync(chapterFile))
@@ -139,11 +147,18 @@ function saveBook(book)
                 site.LastUploaded = s.LastUploaded
             if (s.LastPosted != null && s.LastPosted != undefined)
                 site.LastPosted = s.LastPosted
+            if (s.Broken){ site.Broken = true }
+            if (s.Manual){ site.Manual = true }
+            if (s.Primary){ site.Primary = true }
             return site
         }),
         AltTitles: [...book.AltTitles],
-        Folder: book.Folder
+        Folder: book.Folder,
+        Frequency: book.Frequency
     }
+    if (book.Favorited){ cleanedBook.Favorited = true }
+    if (book.Shelved){ cleanedBook.Shelved = true }
+    if (book.Completed){ cleanedBook.Completed = true }
     if (book.LastUploaded != null && book.LastUploaded != undefined)
         cleanedBook.LastUploaded = book.LastUploaded
     const newList = updateBook(bookList, cleanedBook.Id, cleanedBook)
@@ -228,7 +243,8 @@ async function addBook(browser, url, folder){
         Sites: [
             {
                 SiteId : parsedSite.SiteId,
-                Url: url
+                Url: url,
+                Primary: true
             }
         ]
     }
@@ -608,6 +624,7 @@ function getStatusCategory(bookSite)
 
 
 module.exports = { getSites, getSiteConfig, 
+    saveSiteList,
     getFolders, 
     getBook,getBooksForFolder,searchBooks,
     getChapters, getPagedChapters, 

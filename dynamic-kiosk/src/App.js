@@ -24,6 +24,7 @@ function App() {
         <Route path="/findbook" element={<BookSearch/>}/>
         <Route path="/newbook" element={<AddBook/>}/>
         <Route path="/config" element={<SiteConfig/>}/>
+        <Route path="/config/:siteId" element={<SiteConfig/>}/>
       </Routes>
 
     </Router>

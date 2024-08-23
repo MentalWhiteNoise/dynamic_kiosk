@@ -1,7 +1,9 @@
 import React, {} from "react";
+import { useNavigate } from "react-router-dom";
 import { styled } from '@mui/material/styles';
-import { Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tooltip, IconButton } from "@mui/material";
+import { Paper, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Tooltip, IconButton, Link } from "@mui/material";
 import AssistantIcon from '@mui/icons-material/Assistant';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import { tableCellClasses } from '@mui/material/TableCell';
 //import { Link } from "react-router-dom";
 
@@ -33,6 +35,10 @@ function formatDate(dateString){
 }
 export default function BookList(props) {
     const {site, bookList, onSelectExampleUrl, editMode} = props;
+    const navigate = useNavigate();
+    const onBookClick = (id) =>{
+        navigate(`/book/${id}`)
+    }
     /*console.log(site)
     for (var bk of bookList){
         console.log(bk)
@@ -55,7 +61,16 @@ export default function BookList(props) {
                 <TableBody>
                 {(bookList ?? []).map((row) => (
                     <StyledTableRow key={row.Id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <StyledTableCell>{row.Title}</StyledTableCell>
+                    <StyledTableCell>
+                        <Tooltip title="Goto Book Page">
+                            { // PresentToAll, OpenInBrowser, Newspaper, MenuBook, LocalLibrary, ImportContacts, FileOpen
+                            }
+                            <IconButton size="small" onClick={(e) => {onBookClick(row.Id)}}>
+                                <MenuBookIcon fontSize="inherit" />
+                            </IconButton>
+                        </Tooltip>
+                        {row.Title}
+                    </StyledTableCell>
                     <StyledTableCell>{row.Folder}</StyledTableCell>
                     <StyledTableCell>
                         { editMode ? (

@@ -24,6 +24,66 @@ app.get('/siteconfig', (req, res) => {
     const siteConfig = bookHelper.getSiteConfig()
     res.json(siteConfig)
 })
+app.put('/siteconfig', async (req, res) => {
+    const {site } = req.body;
+    // Validate site!
+    const siteConfig = bookHelper.getSiteConfig()    
+    var found = false
+    for(var s of siteConfig){
+        if (s.site == site.site){
+            found = true
+            break
+        }
+    }
+    if (found)
+    {
+        console.log("Site already exists.", req.body)
+        res.status(400).send('Site already exists.')
+        return
+    }            
+    siteConfig.push(site)
+    try{
+        bookHelper.saveSiteList(siteConfig);
+        res.send(`Site list updated for ${site.site}.`)
+    }
+    catch(ex){
+        console.log(ex)
+        res.status(500).send(ex)
+    }
+})
+
+app.delete('/siteconfig/:siteUrl', (req, res) => {
+    res.status(500).send('TO BE DEVELOPED!')
+})
+app.post('/siteconfig/:siteUrl', (req, res) => {
+    const {site } = req.body;
+    console.log(site)
+    if (site === null || site === undefined || site.site != req.params.siteUrl)
+    {
+        console.log("Site specified does not match url provided.", req.body)
+        res.status(400).send('Site specified does not match url provided. Cannot update.')
+        return
+    }            
+    const siteConfig = bookHelper.getSiteConfig()
+    objIndex = siteConfig.findIndex(obj => obj.site == site.site);
+    
+    if (objIndex == -1)
+    {
+        console.log("Site not found in the config.", req.body)
+        res.status(400).send('Site not found in the config.')
+        return
+    }
+    siteConfig[objIndex] = site
+
+    try{
+        bookHelper.saveSiteList(siteConfig);
+        res.send(`Site list updated for ${req.params.siteUrl}.`)
+    }
+    catch(ex){
+        console.log(ex)
+        res.status(500).send(ex)
+    }
+})
 app.get('/folders', (req, res) => {
     const folderList = bookHelper.getFolders()
     res.json(folderList)
