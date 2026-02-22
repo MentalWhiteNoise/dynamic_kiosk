@@ -1,7 +1,7 @@
 const fs = require('fs');
+const fsPromises = require('fs/promises');
 const parseHelper = require('./parseHelper');
 const helper = require('./genericHelper');
-const { error } = require('console');
 const uuid = require('uuid')
 
 // manipulation to work with windows or linux...
@@ -33,11 +33,9 @@ function getSiteConfig()
 }
 async function saveSiteList(siteList)
 {
-    let data = JSON.stringify(siteList, null, 2);
-    await fs.writeFile(`${dataFolder}/siteConfig.json`, data, (err) =>{
-        if (err) throw err;
-        console.log("Site list updated")
-    })
+    const data = JSON.stringify(siteList, null, 2);
+    await fsPromises.writeFile(`${dataFolder}/siteConfig.json`, data);
+    console.log("Site list updated");
 }
 function getChapters(bookId){
     const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
@@ -51,19 +49,15 @@ function getChapters(bookId){
 
 // File save operations
 async function saveBookList(bookList){
-    let data = JSON.stringify(bookList, null, 2);
-    await fs.writeFile(`${dataFolder}/readingList.json`, data, (err) =>{
-        if (err) throw err;
-        console.log("Reading list updated")
-    })
+    const data = JSON.stringify(bookList, null, 2);
+    await fsPromises.writeFile(`${dataFolder}/readingList.json`, data);
+    console.log("Reading list updated");
 }
 async function saveChapters(bookId, chapterList){
-    const chapterFile = `${dataFolder}/Chapters_${bookId}.json`
-    let data = JSON.stringify(chapterList, null, 2);
-    await fs.writeFile(chapterFile, data, (err) =>{
-        if (err) throw err;
-        console.log("Chapter list updated")
-    })
+    const chapterFile = `${dataFolder}/Chapters_${bookId}.json`;
+    const data = JSON.stringify(chapterList, null, 2);
+    await fsPromises.writeFile(chapterFile, data);
+    console.log("Chapter list updated");
 }
 
 // Simple get methods
@@ -129,7 +123,7 @@ function updateBook(bookList, bookId, book)
     bookList[foundItem] = book;
     return [...bookList];
 }
-function saveBook(book)
+async function saveBook(book)
 {
     const bookList = getReadingList()
     let cleanedBook = { // Get rid of unnecessary properties
@@ -163,13 +157,13 @@ function saveBook(book)
     if (book.LastUploaded != null && book.LastUploaded != undefined)
         cleanedBook.LastUploaded = book.LastUploaded
     const newList = updateBook(bookList, cleanedBook.Id, cleanedBook)
-    saveBookList(newList)
+    await saveBookList(newList)
 }
 
 
 // Chapter CRUD
 // Delete Chapter By Site Id
-function internalDeleteChaptersBySite(bookId, siteId, chapterNumber){
+async function internalDeleteChaptersBySite(bookId, siteId, chapterNumber){
     const chapterList = getChapters(bookId);
     const newChapterList = [];
     chapterList.forEach(c => {
@@ -185,17 +179,16 @@ function internalDeleteChaptersBySite(bookId, siteId, chapterNumber){
             newChapterList.push(c);
         }
     })
-    saveChapters(bookId, newChapterList);
-
+    await saveChapters(bookId, newChapterList);
 }
-function deleteChapterBySite(bookId, siteId, chapterNumber){
-    internalDeleteChaptersBySite(bookId, siteId, chapterNumber)
+async function deleteChapterBySite(bookId, siteId, chapterNumber){
+    await internalDeleteChaptersBySite(bookId, siteId, chapterNumber)
 }
-function deleteSiteChapters(bookId, siteId){
-    internalDeleteChaptersBySite(bookId, siteId, null)
+async function deleteSiteChapters(bookId, siteId){
+    await internalDeleteChaptersBySite(bookId, siteId, null)
 }
 // Delete Site Id
-function deleteSite(bookId, siteId){
+async function deleteSite(bookId, siteId){
     const bookList = getBookList()
     const book = bookList.find(x => x.Id.toString() === bookId)
     const siteIndex = book.Sites.findIndex(x => x.SiteId === siteId)
@@ -204,10 +197,10 @@ function deleteSite(bookId, siteId){
         throw "A book needs to have at least one site. Add a replacement site first, or delete the book."
     }
     const newChapterList = [...getChapters(bookId).filter(x => x.SiteId !== siteId)];
-    saveChapters(bookId, newChapterList);
+    await saveChapters(bookId, newChapterList);
     book.Sites = [...book.Sites.filter(x => x.SiteId != siteId)]
     const newBookList = updateBook(bookList, bookId, book)
-    saveBookList(newBookList)
+    await saveBookList(newBookList)
 }
 async function addSite(browser, bookId, siteId, siteUrl){
     const bookList = getBookList()
@@ -468,7 +461,7 @@ async function testParseUrl(browser, url)
     return site;
 }
 // Manual book / manual read operations
-function addManualSite(bookId, url, imageUrl) {
+async function addManualSite(bookId, url, imageUrl) {
     const bookList = getReadingList();
     const book = bookList.find(x => x.Id.toString() === bookId.toString());
     if (!book) throw `Book ${bookId} not found`;
@@ -479,10 +472,10 @@ function addManualSite(bookId, url, imageUrl) {
         Image: imageUrl || "",
         Manual: true
     });
-    saveBookList(bookList);
+    await saveBookList(bookList);
     return newSiteId;
 }
-function addManualBook(title, folder, imageUrl, url) {
+async function addManualBook(title, folder, imageUrl, url) {
     const bookList = getReadingList();
     const newId = Math.max.apply(null, bookList.map(b => b.Id)) + 1;
     const newSiteId = uuid.v4();
@@ -500,11 +493,11 @@ function addManualBook(title, folder, imageUrl, url) {
         }]
     };
     bookList.push(newBook);
-    saveBookList(bookList);
-    saveChapters(newId, []);
+    await saveBookList(bookList);
+    await saveChapters(newId, []);
     return newBook;
 }
-function logManualRead(bookId, siteId, chapterNumber, chapterTitle, chapterUrl) {
+async function logManualRead(bookId, siteId, chapterNumber, chapterTitle, chapterUrl) {
     const chapterNum = parseFloat(chapterNumber);
     const existingChapters = getChapters(bookId);
     const existingChapter = existingChapters.find(c => c.ChapterNumber === chapterNum);
@@ -536,7 +529,7 @@ function logManualRead(bookId, siteId, chapterNumber, chapterTitle, chapterUrl) 
         }
         existingChapters.push(newChapter);
     }
-    saveChapters(bookId, existingChapters);
+    await saveChapters(bookId, existingChapters);
 
     // Update site's LastSuccessful so the "last read" timestamp reflects this action
     const bookList = getReadingList();
@@ -545,7 +538,7 @@ function logManualRead(bookId, siteId, chapterNumber, chapterTitle, chapterUrl) 
         const site = book.Sites.find(s => s.SiteId === siteId);
         if (site) {
             site.LastSuccessful = new Date().toISOString();
-            saveBookList(bookList);
+            await saveBookList(bookList);
         }
     }
 }
@@ -559,7 +552,7 @@ async function flagAllRead(bookId){
         if (!c.Read)
             c.Read = true;
     })
-    saveChapters(bookId, existingChapters)
+    await saveChapters(bookId, existingChapters)
 }
 async function flagAllUnread(bookId){
     const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
@@ -569,7 +562,7 @@ async function flagAllUnread(bookId){
         if (c.Read)
             c.Read = false;
     })
-    saveChapters(bookId, existingChapters)
+    await saveChapters(bookId, existingChapters)
 }
 async function flagRead(bookId, chapterNumber){
     const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
@@ -579,7 +572,7 @@ async function flagRead(bookId, chapterNumber){
         if (!c.Read && c.ChapterNumber.toString() === chapterNumber.toString())
             c.Read = true;
     })
-    saveChapters(bookId, existingChapters)
+    await saveChapters(bookId, existingChapters)
 }
 async function flagUnread(bookId, chapterNumber){
     const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
@@ -589,7 +582,7 @@ async function flagUnread(bookId, chapterNumber){
         if (c.Read && c.ChapterNumber.toString() === chapterNumber.toString())
             c.Read = false;
     })
-    saveChapters(bookId, existingChapters)
+    await saveChapters(bookId, existingChapters)
 }
 
 // Helper methods

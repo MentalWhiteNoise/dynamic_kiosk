@@ -1,13 +1,10 @@
 const express = require('express')
 var cors = require('cors')
-const bodyParser = require('body-parser');
-const querystring = require('querystring');
 const bookHelper = require('./services/bookCheck/bookHelper')
 const webHelper = require('./services/bookCheck/webHelper');
-const { query } = require('express');
 const app = express()
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json({limit: '500mb'}));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json({limit: '500mb'}));
 app.use(cors())
 const port = 8080
 app.use(function(req, res, next) {
@@ -27,7 +24,7 @@ app.get('/siteconfig', (req, res) => {
 app.put('/siteconfig', async (req, res) => {
     const {site } = req.body;
     // Validate site!
-    const siteConfig = bookHelper.getSiteConfig()    
+    const siteConfig = bookHelper.getSiteConfig()
     var found = false
     for(var s of siteConfig){
         if (s.site == site.site){
@@ -40,10 +37,10 @@ app.put('/siteconfig', async (req, res) => {
         console.log("Site already exists.", req.body)
         res.status(400).send('Site already exists.')
         return
-    }            
+    }
     siteConfig.push(site)
     try{
-        bookHelper.saveSiteList(siteConfig);
+        await bookHelper.saveSiteList(siteConfig);
         res.send(`Site list updated for ${site.site}.`)
     }
     catch(ex){
@@ -55,7 +52,7 @@ app.put('/siteconfig', async (req, res) => {
 app.delete('/siteconfig/:siteUrl', (req, res) => {
     res.status(500).send('TO BE DEVELOPED!')
 })
-app.post('/siteconfig/:siteUrl', (req, res) => {
+app.post('/siteconfig/:siteUrl', async (req, res) => {
     const {site } = req.body;
     console.log(site)
     if (site === null || site === undefined || site.site != req.params.siteUrl)
@@ -76,7 +73,7 @@ app.post('/siteconfig/:siteUrl', (req, res) => {
     siteConfig[objIndex] = site
 
     try{
-        bookHelper.saveSiteList(siteConfig);
+        await bookHelper.saveSiteList(siteConfig);
         res.send(`Site list updated for ${req.params.siteUrl}.`)
     }
     catch(ex){
@@ -179,14 +176,14 @@ app.get('/books/find', (req, res) => {
     res.json(bookList)
 })
 
-app.put('/books/manual', (req, res) => {
+app.put('/books/manual', async (req, res) => {
     const { Title, Folder, ImageUrl, Url } = req.body;
     if (!Title) {
         res.status(400).send('Title is required for a manual book.')
         return
     }
     try {
-        const newBook = bookHelper.addManualBook(Title, Folder || "New", ImageUrl, Url)
+        const newBook = await bookHelper.addManualBook(Title, Folder || "New", ImageUrl, Url)
         res.json(newBook)
     } catch(ex) {
         console.log(ex)
@@ -217,7 +214,7 @@ app.delete('/book/:bookId', (req, res) => {
     res.status(500).send('TO BE DEVELOPED!')
     //res.send(`Delete book ${req.params.bookId}`)
 })
-app.post('/book/:bookId', (req, res) => {
+app.post('/book/:bookId', async (req, res) => {
     const {Id, Title, Folder, Sites } = req.body;
     if (Id === null || Id === undefined || Id != req.params.bookId)
     {
@@ -232,7 +229,7 @@ app.post('/book/:bookId', (req, res) => {
         return
     }
     try{
-        bookHelper.saveBook(req.body);
+        await bookHelper.saveBook(req.body);
         res.send(`Book ${req.params.bookId} updated.`)
     }
     catch(ex){
@@ -242,10 +239,10 @@ app.post('/book/:bookId', (req, res) => {
     //console.log(req.body)
     //res.send(`Attempting to update book ${req.params.bookId}`)
 })
-app.put('/book/:bookId/sites/manual', (req, res) => {
+app.put('/book/:bookId/sites/manual', async (req, res) => {
     const { Url, ImageUrl } = req.body;
     try {
-        const newSiteId = bookHelper.addManualSite(req.params.bookId, Url, ImageUrl)
+        const newSiteId = await bookHelper.addManualSite(req.params.bookId, Url, ImageUrl)
         res.json({ SiteId: newSiteId })
     } catch(ex) {
         console.log(ex)
@@ -270,16 +267,16 @@ app.put('/book/:bookId/sites', async (req, res) => {
         res.status(500).send(`Error saving site for book ${req.params.bookId}: ${ex}`)
     }
 })
-app.delete('/book/:bookId/site/:siteId', (req, res) => {
-    bookHelper.deleteSite(req.params.bookId, req.params.siteId)
+app.delete('/book/:bookId/site/:siteId', async (req, res) => {
+    await bookHelper.deleteSite(req.params.bookId, req.params.siteId)
     res.send(`Site ${req.params.siteId} for book ${req.params.bookId} deleted.`)
 })
-app.delete('/book/:bookId/site/:siteId/chapter/:chapter', (req, res) => {    
-    bookHelper.deleteChapterBySite(req.params.bookId, req.params.siteId, req.params.chapter)
+app.delete('/book/:bookId/site/:siteId/chapter/:chapter', async (req, res) => {
+    await bookHelper.deleteChapterBySite(req.params.bookId, req.params.siteId, req.params.chapter)
     res.send(`Chapter ${req.params.chapter} for book ${req.params.bookId}, site ${req.params.siteId} deleted.`)
 })
-app.delete('/book/:bookId/site/:siteId/chapters/', (req, res) => {
-    bookHelper.deleteSiteChapters(req.params.bookId, req.params.siteId);
+app.delete('/book/:bookId/site/:siteId/chapters/', async (req, res) => {
+    await bookHelper.deleteSiteChapters(req.params.bookId, req.params.siteId);
     res.send(`All chapters for book ${req.params.bookId}, site ${req.params.siteId} deleted.`)
 })
 app.post('/book/:bookId/site/:siteId', (req, res) => { 
@@ -301,34 +298,34 @@ app.post('/book/:bookId/site/:siteId', (req, res) => {
     res.send(`Attempting to update link ${req.params.siteId} for book ${req.params.bookId}`)
 })
 
-app.post('/book/:bookId/site/:siteId/logRead', (req, res) => {
+app.post('/book/:bookId/site/:siteId/logRead', async (req, res) => {
     const { ChapterNumber, ChapterTitle, ChapterUrl } = req.body;
     if (ChapterNumber === null || ChapterNumber === undefined) {
         res.status(400).send('ChapterNumber is required.')
         return
     }
     try {
-        bookHelper.logManualRead(req.params.bookId, req.params.siteId, ChapterNumber, ChapterTitle, ChapterUrl)
+        await bookHelper.logManualRead(req.params.bookId, req.params.siteId, ChapterNumber, ChapterTitle, ChapterUrl)
         res.send(`Logged chapter ${ChapterNumber} as read for book ${req.params.bookId}`)
     } catch(ex) {
         console.log(ex)
         res.status(500).send(ex)
     }
 })
-app.post('/book/:bookId/chapter/:chapter/flagRead', (req, res) => {
-    bookHelper.flagRead(req.params.bookId, req.params.chapter)
+app.post('/book/:bookId/chapter/:chapter/flagRead', async (req, res) => {
+    await bookHelper.flagRead(req.params.bookId, req.params.chapter)
     res.send(`Flag chapter ${req.params.chapter} read for book ${req.params.bookId}`)
 })
-app.post('/book/:bookId/chapter/:chapter/flagUnread', (req, res) => {
-    bookHelper.flagUnread(req.params.bookId, req.params.chapter)
+app.post('/book/:bookId/chapter/:chapter/flagUnread', async (req, res) => {
+    await bookHelper.flagUnread(req.params.bookId, req.params.chapter)
     res.send(`Flag chapter ${req.params.chapter} unread for book ${req.params.bookId}`)
 })
-app.post('/book/:bookId/chapters/flagRead', (req, res) => {
-    bookHelper.flagAllRead(req.params.bookId)
+app.post('/book/:bookId/chapters/flagRead', async (req, res) => {
+    await bookHelper.flagAllRead(req.params.bookId)
     res.send(`Flag all chapters read for book ${req.params.bookId}`)
 })
-app.post('/book/:bookId/chapters/flagUnread', (req, res) => {
-    bookHelper.flagAllUnread(req.params.bookId)
+app.post('/book/:bookId/chapters/flagUnread', async (req, res) => {
+    await bookHelper.flagAllUnread(req.params.bookId)
     res.send(`Flag all chapters unread for book ${req.params.bookId}`)
 })
 
