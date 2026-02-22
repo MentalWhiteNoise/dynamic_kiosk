@@ -228,6 +228,7 @@ export default function SiteConfig(props){
         setFilteredBookList([])
         setSiteList(newSiteList)
         setEditMode(true)
+        setHasChanged(copySite)
         setNewSiteMode(true)
         setNewUrlDialogOpen(false)
         setSite(newSite)

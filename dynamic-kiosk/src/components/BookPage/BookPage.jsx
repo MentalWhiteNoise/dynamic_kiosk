@@ -116,6 +116,7 @@ export default function BookPage(props){
     const [confirmDelete, setConfirmDelete] = React.useState(false);
     const [clickedSite, setClickedSite] = React.useState(null);
     const [activity, setActivity] = React.useState("idle");
+    const [logReadInputs, setLogReadInputs] = React.useState({});
     console.log(book)
     const loadBook = useCallback(() =>{
         fetch(`${ServerAddress}/book/${bookId}`)
@@ -267,6 +268,35 @@ export default function BookPage(props){
         }
         handlePropertyChange(newSiteList, "Sites")
     }
+    const handleSetSiteUrl = (url, siteId) => {
+        var newSiteList = structuredClone(book.Sites)
+        for (var site of newSiteList){
+            if (site.SiteId == siteId){
+                site.Url = url
+            }
+        }
+        handlePropertyChange(newSiteList, "Sites")
+    }
+    const getLogReadInput = (siteId) => logReadInputs[siteId] || { chapterNumber: "", chapterUrl: "" };
+    const setLogReadInput = (siteId, field, value) => {
+        setLogReadInputs(prev => ({
+            ...prev,
+            [siteId]: { ...getLogReadInput(siteId), [field]: value }
+        }));
+    };
+    const handleLogRead = (siteId) => {
+        const input = getLogReadInput(siteId);
+        if (!input.chapterNumber) return;
+        fetch(`${ServerAddress}/book/${bookId}/site/${siteId}/logRead`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ChapterNumber: parseFloat(input.chapterNumber), ChapterUrl: input.chapterUrl || null })
+        })
+        .then(() => {
+            loadBook(bookId);
+            setLogReadInputs(prev => ({ ...prev, [siteId]: { chapterNumber: "", chapterUrl: "" } }));
+        })
+    }
     const handleSetSiteManual = (manual, siteId) => {
         console.log("handleSetSiteManual")
         console.log(manual)
@@ -292,7 +322,7 @@ export default function BookPage(props){
                     <TableRow>
                         <TableCell rowSpan={4} sx={{whiteSpace: "nowrap"}}>
                             <img
-                            src={book.Sites[0].Image}
+                            src={book.Image || book.Sites[0].Image}
                             alt={book.Title}
                             loading="lazy"
                             style={{
@@ -398,7 +428,7 @@ export default function BookPage(props){
                                         }}/>
                                         <Box sx={{ display: 'inline-flex'}}>
                                         <Tooltip title={book.Image === site.Image ? "" : "Use as book image"}>
-                                        <IconButton disabled={book.Image === site.Image} sx={{ left:"-40px", top: "-10px", color: "white" }}>
+                                        <IconButton disabled={book.Image === site.Image} sx={{ left:"-40px", top: "-10px", color: "white" }} onClick={() => handlePropertyChange(site.Image, "Image")}>
                                             <PushPin/>
                                         </IconButton>
                                         </Tooltip>
@@ -419,17 +449,29 @@ export default function BookPage(props){
                                                 </Typography>
                                             </Box>
                                         </Box>
-                                        <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
-                                            <Tooltip title= {`Navigate to chapter list: ${site.Url}`}>
-                                            <IconButton onClick={() => openInNewTab(site.Url)}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap', alignItems: 'center' }}>
+                                            <Tooltip title={site.Url ? `Navigate to: ${site.Url}` : ""}>
+                                            <span>
+                                            <IconButton disabled={!site.Url} onClick={() => openInNewTab(site.Url)}>
                                                 <Web/>
                                             </IconButton>
+                                            </span>
                                             </Tooltip>
-                                            <Box style={{display: 'table'}}>
-                                                <Typography variant="subtitle1" sx={{ display: 'table-cell', verticalAlign: 'middle', color: "rgba(0, 0, 0, 0.6)" }} >
-                                                    {site.Url}
-                                                </Typography>
-                                            </Box>
+                                            {site.Manual ? (
+                                                <TextField
+                                                    size="small"
+                                                    label="Reading URL"
+                                                    value={site.Url}
+                                                    onChange={(e) => handleSetSiteUrl(e.target.value, site.SiteId)}
+                                                    sx={{ minWidth: "300px" }}
+                                                />
+                                            ) : (
+                                                <Box style={{display: 'table'}}>
+                                                    <Typography variant="subtitle1" sx={{ display: 'table-cell', verticalAlign: 'middle', color: "rgba(0, 0, 0, 0.6)" }} >
+                                                        {site.Url}
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                         </Box>
 
                                         <Container sx={{ display: 'table', height: '100%' }}>
@@ -443,24 +485,59 @@ export default function BookPage(props){
                                     <SetManualButton site={site} onSetManual={(manual) => {handleSetSiteManual(manual, site.SiteId)}} />
                                     </Box>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', whiteSpace: 'nowrap' }}>
-                                        <Container>
-                                        <Typography variant="caption">
-                                            <b>Last Attempted:</b> {new Date(site.LastAttempted).toLocaleDateString()}<br/>
-                                            <b>Last Successful:</b> {new Date(site.LastSuccessful).toLocaleDateString()}
-                                        </Typography>
-                                        </Container>
-                                        <Box style={{ display: 'table', height: '100%' }}>
-                                        <Container sx={{display: 'table-cell', flexDirection: 'row', verticalAlign: 'middle', textAlign: 'center'}}>
-                                                <Tooltip title="Check for updates">
-                                                <IconButton onClick={(e) => handleCheckForUpdate(book.Id, site.SiteId)} >
-                                                    <Update/> {/* Check for updates */}
-                                                </IconButton>
-                                                </Tooltip>
-                                            <SiteStatus 
-                                                status={site.Status}
-                                                checkingTriggered={checkingTriggered}/>
-                                        </Container>
-                                        </Box>
+                                        {site.Manual ? (
+                                            <Container>
+                                                <Typography variant="caption">
+                                                    <b>Last Read:</b> {site.LastSuccessful ? new Date(site.LastSuccessful).toLocaleDateString() : "never"}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                                    <TextField
+                                                        size="small"
+                                                        label="Chapter #"
+                                                        type="number"
+                                                        value={getLogReadInput(site.SiteId).chapterNumber}
+                                                        onChange={(e) => setLogReadInput(site.SiteId, "chapterNumber", e.target.value)}
+                                                        sx={{ width: "100px" }}
+                                                    />
+                                                    <TextField
+                                                        size="small"
+                                                        label="Chapter URL (optional)"
+                                                        value={getLogReadInput(site.SiteId).chapterUrl}
+                                                        onChange={(e) => setLogReadInput(site.SiteId, "chapterUrl", e.target.value)}
+                                                        sx={{ width: "250px" }}
+                                                    />
+                                                    <Button
+                                                        variant="contained"
+                                                        size="small"
+                                                        disabled={!getLogReadInput(site.SiteId).chapterNumber}
+                                                        onClick={() => handleLogRead(site.SiteId)}
+                                                    >
+                                                        Log Read
+                                                    </Button>
+                                                </Box>
+                                            </Container>
+                                        ) : (
+                                            <>
+                                            <Container>
+                                            <Typography variant="caption">
+                                                <b>Last Attempted:</b> {new Date(site.LastAttempted).toLocaleDateString()}<br/>
+                                                <b>Last Successful:</b> {new Date(site.LastSuccessful).toLocaleDateString()}
+                                            </Typography>
+                                            </Container>
+                                            <Box style={{ display: 'table', height: '100%' }}>
+                                            <Container sx={{display: 'table-cell', flexDirection: 'row', verticalAlign: 'middle', textAlign: 'center'}}>
+                                                    <Tooltip title="Check for updates">
+                                                    <IconButton onClick={(e) => handleCheckForUpdate(book.Id, site.SiteId)} >
+                                                        <Update/>
+                                                    </IconButton>
+                                                    </Tooltip>
+                                                <SiteStatus
+                                                    status={site.Status}
+                                                    checkingTriggered={checkingTriggered}/>
+                                            </Container>
+                                            </Box>
+                                            </>
+                                        )}
                                     </Box>
                                 </Box>
                                 </Paper>

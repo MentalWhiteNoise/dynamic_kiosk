@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
-import { TableCell, TableRow, IconButton, Badge, Tooltip } from "@mui/material";
+import { TableCell, TableRow, IconButton, Badge, Tooltip, Chip } from "@mui/material";
 import { Bookmark, BookmarkBorder, Edit, AutoStories } from '@mui/icons-material';
 import BookSiteListItem from "./BookSiteListItem";
 import ServerAddress from "../../../services/api";
@@ -100,12 +100,13 @@ export default function BookListItem(props){
             </IconButton>
             </Tooltip>
             <b>{book.Title}</b>
+            {book.Sites.some(s => s.Manual) && <Chip label="Manual" size="small" sx={{ ml: 1 }} />}
         </TableCell>
         </TableRow>
         <TableRow>
         <TableCell sx={{whiteSpace: "nowrap"}}>
             <Tooltip title="Continue reading">
-            <IconButton onClick={() => openInNewTab(book.LastChapterRead.HRef)}>
+            <IconButton onClick={() => openInNewTab(book.LastChapterRead?.HRef)} disabled={!book.LastChapterRead?.HRef}>
             <Badge badgeContent={book.CountUnread}>
                 <AutoStories/> {/* Read unread */}
             </Badge>
@@ -158,7 +159,7 @@ export default function BookListItem(props){
         </TableCell>
         <TableCell sx={{whiteSpace: "nowrap"}}>
             <Tooltip title="Continue reading">
-            <IconButton onClick={() => openInNewTab(book.LastChapterRead.HRef)}>
+            <IconButton onClick={() => openInNewTab(book.LastChapterRead?.HRef)} disabled={!book.LastChapterRead?.HRef}>
             <Badge badgeContent={book.CountUnread}>
                 <AutoStories/> {/* Read unread */}
             </Badge>

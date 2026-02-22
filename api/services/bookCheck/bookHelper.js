@@ -138,8 +138,8 @@ function saveBook(book)
         Sites: book.Sites.map(s => {
             let site = {
                 SiteId: s.SiteId,
-                Url: s.Url,
-                Image: s.Image
+                Url: s.Url ?? "",
+                Image: s.Image ?? ""
             }
             if (s.LastAttempted != null && s.LastAttempted != undefined)
                 site.LastAttempted = s.LastAttempted
@@ -156,6 +156,7 @@ function saveBook(book)
         Folder: book.Folder,
         Frequency: book.Frequency
     }
+    if (book.Image != null && book.Image !== "") cleanedBook.Image = book.Image
     if (book.Favorited){ cleanedBook.Favorited = true }
     if (book.Shelved){ cleanedBook.Shelved = true }
     if (book.Completed){ cleanedBook.Completed = true }
@@ -466,6 +467,89 @@ async function testParseUrl(browser, url)
     }
     return site;
 }
+// Manual book / manual read operations
+function addManualSite(bookId, url, imageUrl) {
+    const bookList = getReadingList();
+    const book = bookList.find(x => x.Id.toString() === bookId.toString());
+    if (!book) throw `Book ${bookId} not found`;
+    const newSiteId = uuid.v4();
+    book.Sites.push({
+        SiteId: newSiteId,
+        Url: url || "",
+        Image: imageUrl || "",
+        Manual: true
+    });
+    saveBookList(bookList);
+    return newSiteId;
+}
+function addManualBook(title, folder, imageUrl, url) {
+    const bookList = getReadingList();
+    const newId = Math.max.apply(null, bookList.map(b => b.Id)) + 1;
+    const newSiteId = uuid.v4();
+    const newBook = {
+        Id: newId,
+        Title: title,
+        Folder: folder || "New",
+        AltTitles: [],
+        Sites: [{
+            SiteId: newSiteId,
+            Url: url || "",
+            Image: imageUrl || "",
+            Manual: true,
+            Primary: true
+        }]
+    };
+    bookList.push(newBook);
+    saveBookList(bookList);
+    saveChapters(newId, []);
+    return newBook;
+}
+function logManualRead(bookId, siteId, chapterNumber, chapterTitle, chapterUrl) {
+    const chapterNum = parseFloat(chapterNumber);
+    const existingChapters = getChapters(bookId);
+    const existingChapter = existingChapters.find(c => c.ChapterNumber === chapterNum);
+
+    if (existingChapter) {
+        existingChapter.Read = true;
+        existingChapter.ReadDate = new Date().toISOString();
+        if (chapterTitle && !existingChapter.ChapterTitle) {
+            existingChapter.ChapterTitle = chapterTitle;
+        }
+        if (chapterUrl) {
+            const existingLink = existingChapter.Links.find(l => l.SiteId === siteId);
+            if (existingLink) {
+                existingLink.HRef = chapterUrl;
+            } else {
+                existingChapter.Links.push({ SiteId: siteId, HRef: chapterUrl, DateUploaded: null });
+            }
+        }
+    } else {
+        const newChapter = {
+            ChapterNumber: chapterNum,
+            ChapterTitle: chapterTitle || `Chapter ${chapterNumber}`,
+            Read: true,
+            ReadDate: new Date().toISOString(),
+            Links: []
+        };
+        if (chapterUrl) {
+            newChapter.Links.push({ SiteId: siteId, HRef: chapterUrl, DateUploaded: null });
+        }
+        existingChapters.push(newChapter);
+    }
+    saveChapters(bookId, existingChapters);
+
+    // Update site's LastSuccessful so the "last read" timestamp reflects this action
+    const bookList = getReadingList();
+    const book = bookList.find(x => x.Id === parseInt(bookId));
+    if (book) {
+        const site = book.Sites.find(s => s.SiteId === siteId);
+        if (site) {
+            site.LastSuccessful = new Date().toISOString();
+            saveBookList(bookList);
+        }
+    }
+}
+
 // Chapter list CRUD
 async function flagAllRead(bookId){
     const book = getReadingList().find(x => x.Id.toString() === bookId.toString());
@@ -531,11 +615,10 @@ function mergeBookStatus(book){
                 }
             })
         })
-        
         const lastReadSiteChapter = siteChapterLinks.filter(sc => sc.Read)
             .sort((a,b) => a.ChapterNumber > b.ChapterNumber ? -1 : a.ChapterNumber < b.ChapterNumber ? 1 : a.DateUploaded > b.DateUploaded ? -1 : a.DateUploaded < b.DateUploaded ? 1 : 0)[0]
 
-        if (siteChapterLinks.length > 0){
+        if (siteChapterLinks.length > 0 & lastReadSiteChapter != undefined){
             lastReadChapter = (lastReadChapter) ?
                 (lastReadChapter.ChapterNumber < lastReadSiteChapter.ChapterNumber) ?
                 lastReadSiteChapter :
@@ -623,15 +706,16 @@ function getStatusCategory(bookSite)
 })()*/
 
 
-module.exports = { getSites, getSiteConfig, 
+module.exports = { getSites, getSiteConfig,
     saveSiteList,
-    getFolders, 
-    getBook,getBooksForFolder,searchBooks,
-    getChapters, getPagedChapters, 
-    addSite, 
-    saveBook, addBook, removeBook, 
-    deleteChapterBySite, deleteSite, deleteSiteChapters, 
+    getFolders,
+    getBook, getBooksForFolder, searchBooks,
+    getChapters, getPagedChapters,
+    addSite,
+    saveBook, addBook, addManualBook, addManualSite, removeBook,
+    deleteChapterBySite, deleteSite, deleteSiteChapters,
     checkBook, checkBookAtSite, testParseUrl,
     flagAllRead, flagAllUnread, flagRead, flagUnread,
+    logManualRead,
     getPageContents, parseText, parseChapterBlocks
 };

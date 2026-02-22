@@ -1,18 +1,23 @@
 import React, {useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Divider, Paper, Typography, List, ListItem, ListItemButton, ListItemText, ListSubheader, TextField, Snackbar, Alert, Autocomplete } from "@mui/material";
+import { Button, Divider, Paper, Typography, List, ListItem, ListItemButton, ListItemText, ListSubheader, TextField, Snackbar, Alert, Autocomplete, Tab, Tabs } from "@mui/material";
 import ServerAddress from "../../services/api";
 import { Box } from "@mui/system";
 import { openInNewTab } from "../../helpers/sharedFunctions";
 import Processing from "../Processing";
 
 export default function AddBook(){
+    const [tab, setTab] = useState(0);
     const [siteList, setSiteList] = useState(null);
     const [folderList, setFolderList] = useState(null);
     const [selectedFolder, setSelectedFolder] = useState("");
     const [addBookError, setAddBookError] = useState(null)
     const [newUrl, setNewUrl] = useState([]);
     const [attemptingToAdd, setAttemptingToAdd] = useState(false);
+    // Manual book fields
+    const [manualTitle, setManualTitle] = useState("");
+    const [manualImageUrl, setManualImageUrl] = useState("");
+    const [manualReadingUrl, setManualReadingUrl] = useState("");
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -73,6 +78,24 @@ export default function AddBook(){
 
         console.log(newUrl)
     }
+    const addManualBook = () => {
+        if (!manualTitle) return;
+        setAttemptingToAdd(true);
+        fetch(`${ServerAddress}/books/manual`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Title: manualTitle, Folder: selectedFolder || "New", ImageUrl: manualImageUrl || null, Url: manualReadingUrl || null })
+        })
+        .then(response => {
+            if (response.ok) return response.json();
+            throw response;
+        })
+        .then(data => { navigate(`/book/${data.Id}`) })
+        .catch(err => {
+            setAttemptingToAdd(false);
+            setAddBookError("Error adding manual book.")
+        })
+    }
     const minLength = siteList == null ? 14 : Math.min.apply(null, siteList.map(s => s.length)) + 6
     return (<>
         <Snackbar open={addBookError != null} autoHideDuration={6000} onClose={() => setAddBookError(null)}>
@@ -80,26 +103,32 @@ export default function AddBook(){
             {addBookError}
           </Alert>
         </Snackbar>
-        <Typography variant="subtitle1">Enter the URL of the chapter list for the book you would like to add</Typography>
-        <br/>
+        <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 2 }}>
+            <Tab label="From URL (auto)" />
+            <Tab label="Manual Entry" />
+        </Tabs>
+
         <Autocomplete
             size="small"
             freeSolo
             value={selectedFolder}
             options={(folderList||[]).map(f => f.Folder)}
-            sx={{ width: 300 }}
+            sx={{ width: 300, mb: 2 }}
             onChange={(e, v) => setSelectedFolder(v)}
             renderInput={(params) => (
                 <TextField {...params} label="Folder"
                     onChange={(e) => setSelectedFolder(e.target.value)}/>
             )}
         />
+
+        {tab === 0 && (<>
+        <Typography variant="subtitle1">Enter the URL of the chapter list for the book you would like to add</Typography>
         <br/>
         <Box sx={{ display: 'flex', flexDirection: 'row', whiteSpace: 'nowrap' }}>
-        <TextField fullWidth 
+        <TextField fullWidth
             size="small"
-            label="New Book URL" 
-            value={newUrl} 
+            label="New Book URL"
+            value={newUrl}
             onChange={(e) => {setNewUrl(e.target.value)}}
                 onKeyPress={(e) => {
                     if (e.key === 'Enter' && newUrl.length >= minLength) { addNewBook() }
@@ -125,6 +154,38 @@ export default function AddBook(){
         }
         </List>
         </Paper>
+        </>)}
+
+        {tab === 1 && (<>
+        <Typography variant="subtitle1">Manually record a book — no scraping, you log chapters yourself.</Typography>
+        <br/>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 500 }}>
+            <TextField
+                size="small"
+                label="Title"
+                required
+                value={manualTitle}
+                onChange={(e) => setManualTitle(e.target.value)}
+            />
+            <TextField
+                size="small"
+                label="Cover Image URL (optional)"
+                value={manualImageUrl}
+                onChange={(e) => setManualImageUrl(e.target.value)}
+            />
+            <TextField
+                size="small"
+                label="Reading URL"
+                required
+                value={manualReadingUrl}
+                onChange={(e) => setManualReadingUrl(e.target.value)}
+                helperText="Where you go to read this book (e.g. the book's chapter list page)"
+            />
+            <Button variant="contained" onClick={addManualBook} disabled={!manualTitle || !manualReadingUrl}>
+                Add Manual Book
+            </Button>
+        </Box>
+        </>)}
     <Processing open={attemptingToAdd} />
     </>)
 }

@@ -179,6 +179,20 @@ app.get('/books/find', (req, res) => {
     res.json(bookList)
 })
 
+app.put('/books/manual', (req, res) => {
+    const { Title, Folder, ImageUrl, Url } = req.body;
+    if (!Title) {
+        res.status(400).send('Title is required for a manual book.')
+        return
+    }
+    try {
+        const newBook = bookHelper.addManualBook(Title, Folder || "New", ImageUrl, Url)
+        res.json(newBook)
+    } catch(ex) {
+        console.log(ex)
+        res.status(500).send(ex)
+    }
+})
 app.put('/books', async (req, res) => {
     const {Url, Folder} = req.body;
     if (Url === null || Url === undefined)
@@ -227,6 +241,16 @@ app.post('/book/:bookId', (req, res) => {
     }
     //console.log(req.body)
     //res.send(`Attempting to update book ${req.params.bookId}`)
+})
+app.put('/book/:bookId/sites/manual', (req, res) => {
+    const { Url, ImageUrl } = req.body;
+    try {
+        const newSiteId = bookHelper.addManualSite(req.params.bookId, Url, ImageUrl)
+        res.json({ SiteId: newSiteId })
+    } catch(ex) {
+        console.log(ex)
+        res.status(500).send(ex)
+    }
 })
 app.put('/book/:bookId/sites', async (req, res) => {
     const {Url, SiteId} = req.body;
@@ -277,6 +301,20 @@ app.post('/book/:bookId/site/:siteId', (req, res) => {
     res.send(`Attempting to update link ${req.params.siteId} for book ${req.params.bookId}`)
 })
 
+app.post('/book/:bookId/site/:siteId/logRead', (req, res) => {
+    const { ChapterNumber, ChapterTitle, ChapterUrl } = req.body;
+    if (ChapterNumber === null || ChapterNumber === undefined) {
+        res.status(400).send('ChapterNumber is required.')
+        return
+    }
+    try {
+        bookHelper.logManualRead(req.params.bookId, req.params.siteId, ChapterNumber, ChapterTitle, ChapterUrl)
+        res.send(`Logged chapter ${ChapterNumber} as read for book ${req.params.bookId}`)
+    } catch(ex) {
+        console.log(ex)
+        res.status(500).send(ex)
+    }
+})
 app.post('/book/:bookId/chapter/:chapter/flagRead', (req, res) => {
     bookHelper.flagRead(req.params.bookId, req.params.chapter)
     res.send(`Flag chapter ${req.params.chapter} read for book ${req.params.bookId}`)
